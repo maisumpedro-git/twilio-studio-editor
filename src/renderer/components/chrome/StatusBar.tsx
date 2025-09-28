@@ -1,4 +1,3 @@
-import type { FlowSummary } from "@shared/index";
 import { CheckIcon, RefreshIcon, SearchIcon } from "../ui/icons";
 
 export type StatusBarProps = {
@@ -6,9 +5,18 @@ export type StatusBarProps = {
   flowsCount: number;
   sidebarMode: "explorer" | "global-search";
   searchTerm: string;
+  isSearching: boolean;
+  searchResultsCount: number;
 };
 
-export const StatusBar = ({ isFetching, flowsCount, sidebarMode, searchTerm }: StatusBarProps) => {
+export const StatusBar = ({
+  isFetching,
+  flowsCount,
+  sidebarMode,
+  searchTerm,
+  isSearching,
+  searchResultsCount
+}: StatusBarProps) => {
   return (
     <footer className="flex h-8 items-center justify-between border-t border-slate-900 bg-slate-950/80 px-4 text-xs text-slate-500">
       <div className="flex items-center gap-3">
@@ -24,7 +32,13 @@ export const StatusBar = ({ isFetching, flowsCount, sidebarMode, searchTerm }: S
       <div className="flex items-center gap-2 text-slate-600">
         <span className="inline-flex items-center gap-1">
           <SearchIcon className="h-3.5 w-3.5" />
-          {sidebarMode === "global-search" ? `Busca: ${searchTerm || ""}` : "Explorer"}
+          {sidebarMode === "global-search"
+            ? isSearching
+              ? `Buscando: ${searchTerm || ""}`
+              : searchTerm
+                ? `Busca: ${searchTerm} (${searchResultsCount} resultados)`
+                : "Busca global"
+            : "Explorer"}
         </span>
       </div>
     </footer>

@@ -1,4 +1,5 @@
-import { APP_NAME } from "./index";
+import { APP_NAME } from "./constants";
+import type { FlowSearchMatch } from "./types";
 
 export const APPLICATION_TECH_STACK = [
   "Electron 38.1.2",
@@ -30,7 +31,9 @@ export const APPLICATION_STATE_BLUEPRINT = {
   activeWidgetName: undefined as string | undefined,
   globalSearchTerm: "",
   globalSearchResults: [] as unknown[],
+  isSearching: false,
   isFetching: false,
+  selectedSearchMatch: undefined as FlowSearchMatch | undefined,
   toast: undefined as undefined | {
     intent: "success" | "error" | "info";
     message: string;

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMemo } from "react";
 
-import type { FlowSummary, SidebarMode } from "@shared/index";
+import type { FlowSummary, SidebarMode, FlowSearchMatch } from "@shared/index";
 import { SearchIcon, FlowIcon } from "../ui/icons";
 
 export type SidebarExplorerProps = {
@@ -10,9 +10,12 @@ export type SidebarExplorerProps = {
   activeFlowId?: string;
   isFetching: boolean;
   searchTerm: string;
-  onSelectFlow: (flowId: string) => void;
+  searchResults: FlowSearchMatch[];
+  isSearching: boolean;
+  onSelectFlow: (filePath: string) => void;
   onChangeSearch: (value: string) => void;
   onToggleMode: () => void;
+  onSelectSearchResult: (match: FlowSearchMatch) => void;
 };
 
 export const SidebarExplorer = ({
@@ -21,9 +24,12 @@ export const SidebarExplorer = ({
   activeFlowId,
   isFetching,
   searchTerm,
+  searchResults,
+  isSearching,
   onSelectFlow,
   onChangeSearch,
-  onToggleMode
+  onToggleMode,
+  onSelectSearchResult
 }: SidebarExplorerProps) => {
   const sortedFlows = useMemo(() => {
     return [...flows].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -61,9 +67,16 @@ export const SidebarExplorer = ({
               className="w-full rounded-md border border-slate-800 bg-slate-950/50 py-2 pl-8 pr-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-surface-500 focus:outline-none"
             />
           </div>
-          <p className="text-xs text-slate-500">
-            Resultados aparecerão em tempo real. Pressione Esc para voltar ao Explorer.
-          </p>
+          <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
+            <span>Pressione Esc para voltar</span>
+            <span>
+              {isSearching
+                ? "Buscando..."
+                : searchTerm.trim().length === 0
+                  ? "Aguardando termo"
+                  : `${searchResults.length} resultado${searchResults.length === 1 ? "" : "s"}`}
+            </span>
+          </div>
         </div>
       ) : null}
 
@@ -100,11 +113,45 @@ export const SidebarExplorer = ({
             })}
           </ul>
         ) : (
-          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-slate-600">
-            <p>
-              Digite um termo para iniciar a busca global. Resultados detalhados serão exibidos aqui na
-              próxima etapa.
-            </p>
+          <div className="flex h-full flex-col gap-3 px-2 py-3">
+            {searchTerm.trim().length === 0 && searchResults.length === 0 && !isSearching ? (
+              <div className="rounded-md border border-dashed border-slate-800 bg-slate-950/40 px-4 py-6 text-center text-xs text-slate-500">
+                Digite pelo menos 2 caracteres para buscar nos fluxos.
+              </div>
+            ) : null}
+            {isSearching ? (
+              <div className="rounded-md border border-slate-800 bg-slate-950/40 px-4 py-4 text-center text-xs text-slate-500">
+                Buscando em seus fluxos...
+              </div>
+            ) : null}
+            {!isSearching && searchTerm.trim().length > 0 && searchResults.length === 0 ? (
+              <div className="rounded-md border border-dashed border-slate-800 bg-slate-950/40 px-4 py-6 text-center text-xs text-slate-500">
+                Nenhum resultado encontrado para “{searchTerm}”.
+              </div>
+            ) : null}
+            <ul className="space-y-2">
+              {searchResults.map((match) => (
+                <li key={`${match.fileId}-${match.line}-${match.column}`}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSearchResult(match)}
+                    className="w-full rounded-md border border-slate-800 bg-slate-950/50 px-3 py-2 text-left text-xs text-slate-400 transition hover:border-slate-700 hover:bg-slate-900/70"
+                  >
+                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
+                      <span>{match.fileName}</span>
+                      <span>{match.path}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-100">{match.preview}</p>
+                    {match.widgetName ? (
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Widget: <span className="text-slate-300">{match.widgetName}</span>
+                        {match.widgetType ? ` · ${match.widgetType}` : ""}
+                      </p>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

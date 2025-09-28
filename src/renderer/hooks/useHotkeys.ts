@@ -5,16 +5,24 @@ type Hotkey = {
   handler: (event: KeyboardEvent) => void;
 };
 
-const normalize = (combo: string) =>
-  combo
+export const normalize = (combo: string) => {
+  const parts = combo
     .toLowerCase()
     .split("+")
     .map((segment) => segment.trim())
-    .filter(Boolean)
-    .sort()
-    .join("+");
+    .filter(Boolean);
+  const mods: string[] = [];
+  const keys: string[] = [];
+  parts.forEach((p) => {
+    if (["mod", "ctrl", "meta", "shift", "alt"].includes(p)) mods.push(p === "ctrl" || p === "meta" ? "mod" : p);
+    else keys.push(p);
+  });
+  mods.sort();
+  keys.sort();
+  return [...mods, ...keys].join("+");
+};
 
-const matchEventCombo = (event: KeyboardEvent) => {
+export const matchEventCombo = (event: KeyboardEvent) => {
   const keys: string[] = [];
   if (event.ctrlKey || event.metaKey) {
     keys.push("mod");
@@ -29,7 +37,9 @@ const matchEventCombo = (event: KeyboardEvent) => {
   if (!["control", "shift", "alt", "meta"].includes(key)) {
     keys.push(key);
   }
-  return keys.sort().join("+");
+  const mods = keys.filter((k) => ["mod", "shift", "alt"].includes(k)).sort();
+  const others = keys.filter((k) => !["mod", "shift", "alt"].includes(k)).sort();
+  return [...mods, ...others].join("+");
 };
 
 export const useHotkeys = (hotkeys: Hotkey[]) => {

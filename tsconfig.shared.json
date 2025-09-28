@@ -4,8 +4,6 @@
     "module": "CommonJS",
     "outDir": "dist/shared",
     "rootDir": "src/shared",
-    "declaration": true,
-    "declarationDir": "dist/shared",
     "types": [],
     "composite": true,
     "sourceMap": true

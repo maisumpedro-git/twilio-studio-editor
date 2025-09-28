@@ -36,10 +36,12 @@ type AppState = {
   sidebarMode: SidebarMode;
   editorMode: EditorMode;
   isFetching: boolean;
+  isSearching: boolean;
   searchTerm: string;
   searchResults: FlowSearchMatch[];
   activeWidgetName?: string;
   toast?: ToastMessage;
+  selectedSearchMatch?: FlowSearchMatch;
   initialize: () => Promise<void>;
   refreshFlows: () => Promise<void>;
   openFlow: (filePath: string) => Promise<void>;
@@ -55,7 +57,9 @@ type AppState = {
   setEditorMode: (mode: EditorMode) => void;
   setSearchTerm: (term: string) => void;
   setSearchResults: (results: FlowSearchMatch[]) => void;
+  performSearch: (term: string) => Promise<void>;
   setActiveWidget: (widgetName?: string) => void;
+  setActiveSearchMatch: (match?: FlowSearchMatch) => void;
   pushToast: (toast: ToastMessage) => void;
   clearToast: () => void;
 };
@@ -81,10 +85,12 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   sidebarMode: APPLICATION_STATE_BLUEPRINT.sidebarMode,
   editorMode: APPLICATION_STATE_BLUEPRINT.editorMode,
   isFetching: APPLICATION_STATE_BLUEPRINT.isFetching,
+  isSearching: APPLICATION_STATE_BLUEPRINT.isSearching ?? false,
   searchTerm: APPLICATION_STATE_BLUEPRINT.globalSearchTerm,
   searchResults: [],
   activeWidgetName: APPLICATION_STATE_BLUEPRINT.activeWidgetName,
   toast: undefined,
+  selectedSearchMatch: undefined,
 
   initialize: async () => {
     await get().refreshFlows();
@@ -98,8 +104,8 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
     const api = ensureApi();
     set({ isFetching: true });
     try {
-      const flows = await api.listFlows();
-      set({ flows, isFetching: false });
+  const flows = await api.listFlows();
+  set({ flows, isFetching: false, selectedSearchMatch: undefined });
     } catch (error) {
       console.error("Failed to list flows", error);
       set({ isFetching: false });
@@ -154,6 +160,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
     try {
       const result = await api.downloadAllFlows();
       set({ flows: result.flows ?? [], isFetching: false });
+      get().setActiveSearchMatch(undefined);
       get().pushToast({
         intent: result.success ? "success" : "error",
         message: result.message,
@@ -284,7 +291,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
     if (!document) {
       return;
     }
-    set({ activeFlowId: flowId, activeWidgetName: undefined });
+    set({ activeFlowId: flowId, activeWidgetName: undefined, selectedSearchMatch: undefined });
   },
 
   updateDocumentJson: (flowId: string, json: string) => {
@@ -349,7 +356,34 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   setEditorMode: (mode: EditorMode) => set({ editorMode: mode }),
   setSearchTerm: (term: string) => set({ searchTerm: term }),
   setSearchResults: (results: FlowSearchMatch[]) => set({ searchResults: results }),
+  performSearch: async (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) {
+      set({ searchResults: [], isSearching: false, selectedSearchMatch: undefined });
+      return;
+    }
+
+    const api = ensureApi();
+  set({ isSearching: true, selectedSearchMatch: undefined });
+    try {
+      const results = await api.searchFlows(trimmed);
+      if (get().searchTerm.trim() !== trimmed) {
+        set({ isSearching: false });
+        return;
+      }
+      set({ searchResults: results, isSearching: false });
+    } catch (error) {
+      console.error("Failed to search flows", error);
+  set({ isSearching: false, selectedSearchMatch: undefined });
+      get().pushToast({
+        intent: "error",
+        message: "Não foi possível buscar nos fluxos.",
+        timestamp: Date.now()
+      });
+    }
+  },
   setActiveWidget: (widgetName?: string) => set({ activeWidgetName: widgetName }),
+  setActiveSearchMatch: (match?: FlowSearchMatch) => set({ selectedSearchMatch: match }),
   pushToast: (toast: ToastMessage) => set({ toast }),
   clearToast: () => set({ toast: undefined })
 });
