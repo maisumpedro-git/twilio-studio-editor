@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "dist/shared",
+    "rootDir": "src/shared",
+    "declaration": true,
+    "declarationDir": "dist/shared",
+    "types": [],
+    "composite": true,
+    "sourceMap": true
+  },
+  "include": ["src/shared/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

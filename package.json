@@ -1,0 +1,78 @@
+{
+  "name": "twilio-studio-editor",
+  "version": "0.1.0",
+  "description": "Desktop editor for Twilio Studio flows with synchronized JSON and graph editing",
+  "main": "dist/main/main/index.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "clean": "rimraf dist",
+    "watch-shared": "tsc -p tsconfig.shared.json --watch",
+    "watch-main": "tsc -p tsconfig.main.json --watch",
+    "watch-preload": "tsc -p tsconfig.preload.json --watch",
+    "build-shared": "tsc -p tsconfig.shared.json",
+    "build-main": "tsc -p tsconfig.main.json",
+    "build-preload": "tsc -p tsconfig.preload.json",
+    "dev-renderer": "vite dev --config vite.config.ts",
+    "build-renderer": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+  "dev-electron": "wait-on dist/shared/index.js dist/main/main/index.js dist/preload/preload/index.js http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "dev": "cross-env NODE_ENV=development concurrently \"npm:watch-shared\" \"npm:watch-main\" \"npm:watch-preload\" \"npm:dev-renderer\" \"npm:dev-electron\"",
+    "typecheck": "tsc --noEmit -p tsconfig.renderer.json",
+    "lint": "eslint . --ext .ts,.tsx",
+    "build": "npm run clean && npm run build-shared && npm run build-main && npm run build-preload && npm run build-renderer",
+    "package": "npm run build && electron-builder",
+    "test": "vitest"
+  },
+  "build": {
+    "appId": "com.twilio.studio.editor",
+    "asar": true,
+    "files": [
+      "dist/main/**/*",
+      "dist/preload/**/*",
+      "dist/renderer/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "resources"
+    }
+  },
+  "dependencies": {
+    "@monaco-editor/react": "4.7.0",
+    "axios": "1.7.3",
+    "clsx": "2.1.1",
+    "monaco-editor": "0.49.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "reactflow": "11.11.4",
+    "zustand": "4.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.12",
+    "@types/react": "18.3.5",
+    "@types/react-dom": "18.3.0",
+    "@vitejs/plugin-react": "4.3.1",
+    "autoprefixer": "10.4.20",
+    "concurrently": "9.1.0",
+    "cross-env": "7.0.3",
+    "electron": "38.1.2",
+    "electron-builder": "24.13.3",
+    "eslint": "8.57.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.29.1",
+    "eslint-plugin-jsx-a11y": "6.9.0",
+    "eslint-plugin-react": "7.35.0",
+    "eslint-plugin-react-hooks": "4.6.2",
+    "@typescript-eslint/eslint-plugin": "7.17.0",
+    "@typescript-eslint/parser": "7.17.0",
+    "postcss": "8.4.41",
+    "rimraf": "5.0.7",
+    "tailwindcss": "3.4.9",
+    "ts-node": "10.9.2",
+    "tslib": "2.7.0",
+    "typescript": "5.6.2",
+    "vite": "5.3.4",
+    "vitest": "1.6.0",
+    "wait-on": "7.2.0"
+  }
+}
