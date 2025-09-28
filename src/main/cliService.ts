@@ -12,7 +12,7 @@ const parseJson = <T>(input: string): T | undefined => {
 };
 
 export const downloadAllFlows = async () => {
-  const result = await executeTwilioCLI(["api:studio:v2:flows:list", "--limit", "200", "--output", "json"]);
+  const result = await executeTwilioCLI(["api:studio:v2:flows:list", "-o", "json"]);
   if (!result.success) {
     return {
       success: false,
@@ -32,7 +32,7 @@ export const downloadAllFlows = async () => {
       "api:studio:v2:flows:fetch",
       "--sid",
       flow.sid,
-      "--output",
+      "-o",
       "json"
     ]);
     if (!fetchResult.success) {
@@ -66,7 +66,7 @@ export const validateFlow = async (flow: TwilioFlowDefinition) => {
       "api:studio:v2:flows:validate",
       "--definition",
       `@${temp.path}`,
-      "--output",
+      "-o",
       "json"
     ]);
     return result;
@@ -88,7 +88,7 @@ export const publishFlow = async (flow: TwilioFlowDefinition) => {
       flow.sid,
       "--definition",
       `@${temp.path}`,
-      "--output",
+      "-o",
       "json"
     ]);
     return result;
