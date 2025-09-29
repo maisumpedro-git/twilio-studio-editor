@@ -112,6 +112,9 @@ const registerIpcHandlers = () => {
     }
   );
 
+  // No-op placeholder for future main-process support if needed
+  registerHandler<{ widgetName?: string }, boolean>("app:set-active-widget", async () => true);
+
   registerHandler<{ fileName: string }, string>("flows:resolve-path", async (_event, payload) => {
     return resolveFlowPath(payload.fileName);
   });

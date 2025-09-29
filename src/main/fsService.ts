@@ -16,9 +16,13 @@ const sanitizeName = (name: string) =>
     .slice(0, 120) || "flow";
 
 export const buildFlowFileName = (friendlyName: string, sid?: string) => {
+  // Requirement: filename must be exactly the SID when available
+  if (sid && sid.trim().length > 0) {
+    return `${sid}${FLOW_FILE_EXTENSION}`;
+  }
+  // Fallback: sanitized friendly name, else a generic name
   const base = sanitizeName(friendlyName || "flow");
-  const suffix = sid ? `-${sid}` : "";
-  return `${base}${suffix}${FLOW_FILE_EXTENSION}`;
+  return `${base}${FLOW_FILE_EXTENSION}`;
 };
 
 export const resolveFlowPath = (fileName: string) => {
@@ -50,8 +54,9 @@ export const listFlowSummaries = async (): Promise<FlowSummary[]> => {
         fileName: entry.name,
         filePath: fullPath,
         updatedAt: stat.mtimeMs,
-        friendlyName: parsed?.friendly_name ?? entry.name.replace(FLOW_FILE_EXTENSION, ""),
-        hasSid: Boolean(parsed?.sid)
+        friendlyName: parsed?.friendlyName ?? entry.name.replace(FLOW_FILE_EXTENSION, ""),
+        hasSid: Boolean(parsed?.sid),
+        sid: parsed?.sid
       });
     } catch (error) {
       console.error(`Failed to parse flow file ${fullPath}`, error);

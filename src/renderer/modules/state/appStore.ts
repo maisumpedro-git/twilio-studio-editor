@@ -138,8 +138,9 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
             ? {
                 ...summary,
                 updatedAt: file.updatedAt,
-                friendlyName: file.flow.friendly_name ?? summary.friendlyName,
-                hasSid: Boolean(file.flow.sid)
+                friendlyName: file.flow.friendlyName ?? summary.friendlyName,
+                hasSid: Boolean(file.flow.sid),
+                sid: file.flow.sid ?? summary.sid
               }
             : summary
         )
@@ -166,6 +167,11 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
         message: result.message,
         timestamp: Date.now()
       });
+      // Auto-open the most recent flow after download to make graph visible immediately
+      if (result.success && (result.flows?.length ?? 0) > 0) {
+        const first = result.flows[0];
+        await get().openFlow(first.filePath);
+      }
     } catch (error) {
       console.error("Failed to download flows", error);
       set({ isFetching: false });
@@ -340,8 +346,9 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
           ? {
               ...summary,
               updatedAt: file.updatedAt,
-              friendlyName: file.flow.friendly_name ?? summary.friendlyName,
-              hasSid: Boolean(file.flow.sid)
+              friendlyName: file.flow.friendlyName ?? summary.friendlyName,
+              hasSid: Boolean(file.flow.sid),
+              sid: file.flow.sid ?? summary.sid
             }
           : summary
       )

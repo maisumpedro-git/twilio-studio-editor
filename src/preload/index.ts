@@ -19,6 +19,7 @@ export type TwilioStudioAPI = {
   validateFlow: (flow: TwilioFlowDefinition) => Promise<CliResult>;
   publishFlow: (flow: TwilioFlowDefinition) => Promise<CliResult>;
   saveFlowLocally: (flow: TwilioFlowDefinition) => Promise<FlowFile>;
+  setActiveWidget: (widgetName?: string) => Promise<boolean>;
 };
 
 const api: TwilioStudioAPI = {
@@ -32,7 +33,8 @@ const api: TwilioStudioAPI = {
   downloadAllFlows: () => ipcRenderer.invoke("twilio:download-all"),
   validateFlow: (flow) => ipcRenderer.invoke("twilio:validate-flow", { flow }),
   publishFlow: (flow) => ipcRenderer.invoke("twilio:publish-flow", { flow }),
-  saveFlowLocally: (flow) => ipcRenderer.invoke("twilio:save-flow", { flow })
+  saveFlowLocally: (flow) => ipcRenderer.invoke("twilio:save-flow", { flow }),
+  setActiveWidget: (widgetName) => ipcRenderer.invoke("app:set-active-widget", { widgetName })
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);

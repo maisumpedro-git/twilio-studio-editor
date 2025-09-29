@@ -42,6 +42,7 @@ const App = () => {
   const pushToast = useAppStore((state) => state.pushToast);
   const clearToast = useAppStore((state) => state.clearToast);
   const setActiveSearchMatch = useAppStore((state) => state.setActiveSearchMatch);
+  const setActiveWidget = useAppStore((state) => state.setActiveWidget);
   const selectedSearchMatch = useAppStore((state) => state.selectedSearchMatch);
 
   useEffect(() => {
@@ -95,6 +96,9 @@ const App = () => {
     void openFlow(summary.filePath)
       .then(() => {
         setActiveSearchMatch(match);
+        if (match.widgetName) {
+          setActiveWidget(match.widgetName);
+        }
         setSidebarMode("explorer");
       })
       .catch(() => undefined);
@@ -147,7 +151,7 @@ const App = () => {
         appVersion={version}
         sidebarMode={sidebarMode}
         editorMode={editorMode}
-        currentFlowName={activeFlow?.flow.friendly_name}
+        currentFlowName={activeFlow?.flow.friendlyName}
         isFetching={isFetching}
         onRefreshFlows={refreshFlows}
         onToggleSidebarMode={toggleSidebarMode}

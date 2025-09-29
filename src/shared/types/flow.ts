@@ -12,7 +12,7 @@ export type TwilioWidget = {
 
 export type TwilioFlowDefinition = {
   sid?: string;
-  friendly_name: string;
+  friendlyName: string;
   status?: string;
   definition: {
     description?: string;
@@ -40,6 +40,7 @@ export type FlowSummary = {
   updatedAt: number;
   friendlyName: string;
   hasSid: boolean;
+  sid?: string;
 };
 
 export type FlowSearchMatch = {

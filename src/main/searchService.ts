@@ -54,9 +54,9 @@ export const searchInFlows = async (term: string): Promise<FlowSearchMatch[]> =>
         const index = match.index;
         const previewStart = Math.max(0, index - CONTEXT_RADIUS);
         const previewEnd = Math.min(source.length, index + match[0].length + CONTEXT_RADIUS);
-        const preview = source.slice(previewStart, previewEnd).replace(/\s+/g, " ").trim();
+  const preview = source.slice(previewStart, previewEnd).replace(/\s+/g, " ").trim();
         const { line, column } = indexToLocation(source, index);
-        const widget = locateWidgetForMatch(file.flow, match[0]);
+  const widget = locateWidgetForMatch(file.flow, match[0]);
 
         matches.push({
           fileId: summary.id,

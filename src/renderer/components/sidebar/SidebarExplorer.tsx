@@ -105,7 +105,15 @@ export const SidebarExplorer = ({
                     <FlowIcon className="mt-0.5 h-4 w-4" />
                     <span className="flex-1">
                       <span className="block text-sm font-medium">{flow.friendlyName}</span>
-                      <span className="text-xs text-slate-500">{flow.fileName}</span>
+                      <span className="text-xs text-slate-500">
+                        {flow.sid ? (
+                          <>
+                            <span className="text-slate-400">SID:</span> {flow.sid}
+                            <span className="mx-2 text-slate-600">·</span>
+                          </>
+                        ) : null}
+                        {flow.fileName}
+                      </span>
                     </span>
                   </button>
                 </li>

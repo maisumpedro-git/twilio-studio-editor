@@ -12,7 +12,14 @@ const parseJson = <T>(input: string): T | undefined => {
 };
 
 export const downloadAllFlows = async () => {
-  const result = await executeTwilioCLI(["api:studio:v2:flows:list", "-o", "json"]);
+  // Try to fetch as many flows as possible in one call (Twilio CLI supports --limit)
+  const result = await executeTwilioCLI([
+    "api:studio:v2:flows:list",
+    "--limit",
+    process.env.TWILIO_CLI_LIST_LIMIT || "1000",
+    "-o",
+    "json"
+  ]);
   if (!result.success) {
     return {
       success: false,
@@ -21,8 +28,13 @@ export const downloadAllFlows = async () => {
     };
   }
 
-  const parsed = parseJson<{ flows: TwilioFlowDefinition[] } | TwilioFlowDefinition[]>(result.stdout);
-  const flowsArray = Array.isArray(parsed) ? parsed : parsed?.flows ?? [];
+  const parsed = parseJson<
+    { flows?: TwilioFlowDefinition[]; data?: TwilioFlowDefinition[] } | TwilioFlowDefinition[]
+  >(result.stdout);
+  // Twilio CLI may return either a top-level array or an object with `flows` or `data`
+  const flowsArray = Array.isArray(parsed)
+    ? parsed
+    : parsed?.flows || parsed?.data || [];
 
   for (const flow of flowsArray) {
     if (!flow.sid) {
@@ -40,12 +52,12 @@ export const downloadAllFlows = async () => {
       continue;
     }
 
-    const detailed = parseJson<TwilioFlowDefinition>(fetchResult.stdout);
+    const detailed = parseJson<TwilioFlowDefinition[]>(fetchResult.stdout)?.[0];
     if (!detailed) {
       continue;
     }
 
-    const fileName = buildFlowFileName(detailed.friendly_name ?? detailed.sid ?? "flow", detailed.sid);
+    const fileName = buildFlowFileName(detailed.friendlyName, detailed.sid);
     const filePath = resolveFlowPath(fileName);
     await writeFlowFile(filePath, detailed);
   }
@@ -98,7 +110,7 @@ export const publishFlow = async (flow: TwilioFlowDefinition) => {
 };
 
 export const saveFlowLocally = async (flow: TwilioFlowDefinition) => {
-  const fileName = buildFlowFileName(flow.friendly_name ?? flow.sid ?? "flow", flow.sid);
+  const fileName = buildFlowFileName(flow.friendlyName, flow.sid);
   const filePath = resolveFlowPath(fileName);
   return writeFlowFile(filePath, flow);
 };
