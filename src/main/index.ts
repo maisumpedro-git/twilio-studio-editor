@@ -14,6 +14,7 @@ import { getFlowsDirectory, setWorkspaceRoot, getWorkspaceRoot } from "./constan
 import { searchInFlows } from "./searchService";
 import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./cliService";
 import { getHeadFileContent, isGitRepo } from "./gitService";
+import { listEnvFiles, setActiveEnv, ensureMigrationTemplate } from "./workspaceService";
 import type { FlowSummary, FlowFile, TwilioFlowDefinition } from "../shared";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -151,6 +152,20 @@ const registerIpcHandlers = () => {
   registerHandler<{ flow: TwilioFlowDefinition }, Awaited<ReturnType<typeof saveFlowLocally>>>(
     "twilio:save-flow",
     async (_event, payload) => saveFlowLocally(payload.flow)
+  );
+
+  // Workspace settings helpers
+  registerHandler<unknown, Awaited<ReturnType<typeof listEnvFiles>>>(
+    "workspace:list-env-files",
+    async () => listEnvFiles()
+  );
+  registerHandler<{ envFileName: string }, { success: true }>(
+    "workspace:set-active-env",
+    async (_event, payload) => setActiveEnv(payload.envFileName)
+  );
+  registerHandler<unknown, Awaited<ReturnType<typeof ensureMigrationTemplate>>>(
+    "workspace:ensure-migration-template",
+    async () => ensureMigrationTemplate()
   );
 
   // Git integration

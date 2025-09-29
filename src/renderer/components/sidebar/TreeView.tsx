@@ -6,9 +6,10 @@ export type TreeNode = {
   path: string; // relative path for folders/files
   children?: TreeNode[];
   filePath?: string; // absolute path for file leaf
+  displayLabel?: string; // friendly label for leaf
 };
 
-export function buildTree(paths: Array<{ fileName: string; filePath: string }>): TreeNode[] {
+export function buildTree(paths: Array<{ fileName: string; filePath: string; friendlyName?: string }>): TreeNode[] {
   const root: Record<string, any> = {};
   for (const p of paths) {
     const parts = p.fileName.split(/[\\/]/g).filter(Boolean);
@@ -21,6 +22,7 @@ export function buildTree(paths: Array<{ fileName: string; filePath: string }>):
       cursor.children[part] = cursor.children[part] || { name: part, path: acc };
       if (i === parts.length - 1) {
         cursor.children[part].filePath = p.filePath;
+        cursor.children[part].displayLabel = p.friendlyName || parts[parts.length - 1];
       }
       cursor = cursor.children[part];
     }
@@ -36,7 +38,8 @@ export function buildTree(paths: Array<{ fileName: string; filePath: string }>):
           name: child.name,
           path: child.path,
           children: childArr.length ? childArr : undefined,
-          filePath: child.filePath
+          filePath: child.filePath,
+          displayLabel: child.displayLabel
         } as TreeNode;
       });
   };
@@ -114,7 +117,7 @@ const TreeItem = ({
         ) : (
           <span className="text-slate-500">{expanded ? "▼" : "▶"}</span>
         )}
-        <span className="truncate">{node.name}</span>
+        <span className="truncate">{node.filePath ? (node.displayLabel || node.name) : node.name}</span>
       </div>
       {!isLeaf && expanded ? (
         <ul className="space-y-1">

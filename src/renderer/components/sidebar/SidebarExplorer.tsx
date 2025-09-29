@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { FlowSummary, SidebarMode, FlowSearchMatch } from "@shared/index";
 import { SearchIcon, FlowIcon } from "../ui/icons";
@@ -47,7 +47,7 @@ export const SidebarExplorer = ({
   }, [flows]);
 
   const tree = useMemo(
-    () => buildTree(sortedFlows.map((f) => ({ fileName: f.fileName, filePath: f.filePath }))),
+    () => buildTree(sortedFlows.map((f) => ({ fileName: f.fileName, filePath: f.filePath, friendlyName: f.friendlyName }))),
     [sortedFlows]
   );
 
@@ -154,6 +154,7 @@ export const SidebarExplorer = ({
                 onOpenInNewTab={onOpenFlowInNewTab}
               />
             )}
+            <WorkspaceSettingsBlock />
           </div>
         ) : (
           <div className="flex h-full flex-col gap-3 px-2 py-3">
@@ -203,3 +204,82 @@ export const SidebarExplorer = ({
 };
 
 export default SidebarExplorer;
+
+function WorkspaceSettingsBlock() {
+  const [envFiles, setEnvFiles] = useState<Array<{ name: string; path: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await window.twilioStudio.listEnvFiles();
+        if (mounted) setEnvFiles(list);
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const setActive = async (name: string) => {
+    try {
+      setBusy(true);
+      await window.twilioStudio.setActiveEnv(name);
+      setMsg(`.env atualizado a partir de ${name}`);
+    } catch (e) {
+      setMsg(`Falha ao atualizar .env (${name})`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const ensureTemplate = async () => {
+    try {
+      setBusy(true);
+      const res = await window.twilioStudio.ensureMigrationTemplate();
+      setMsg(`Template gerado em ${res.path}`);
+    } catch {
+      setMsg("Falha ao gerar template de migração");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 space-y-2 rounded-md border border-slate-800 bg-slate-950/40 p-2">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
+        <span>Workspace settings</span>
+        <button
+          type="button"
+          className="rounded px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+          onClick={ensureTemplate}
+          disabled={busy}
+        >
+          Gerar migration template
+        </button>
+      </div>
+      <div className="text-xs text-slate-400">Arquivos .env detectados:</div>
+      <ul className="space-y-1">
+        {envFiles.map((e) => (
+          <li key={e.name} className="flex items-center justify-between">
+            <span className="truncate text-xs text-slate-300">{e.name}</span>
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800"
+              onClick={() => void setActive(e.name)}
+              disabled={busy}
+            >
+              Usar como .env
+            </button>
+          </li>
+        ))}
+        {envFiles.length === 0 ? (
+          <li className="text-xs text-slate-500">Nenhum .env encontrado neste workspace.</li>
+        ) : null}
+      </ul>
+      {msg ? <div className="text-[11px] text-slate-500">{msg}</div> : null}
+    </div>
+  );
+}

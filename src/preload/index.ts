@@ -24,6 +24,9 @@ export type TwilioStudioAPI = {
   chooseWorkspaceRoot: () => Promise<{ path: string | null }>;
   isGitRepo: () => Promise<boolean>;
   getHeadFileContent: (absPath: string) => Promise<{ existsInHead: boolean; content: string }>;
+  listEnvFiles: () => Promise<Array<{ name: string; path: string }>>;
+  setActiveEnv: (envFileName: string) => Promise<{ success: true }>;
+  ensureMigrationTemplate: () => Promise<{ path: string }>;
 };
 
 const api: TwilioStudioAPI = {
@@ -42,7 +45,10 @@ const api: TwilioStudioAPI = {
   getWorkspaceRoot: () => ipcRenderer.invoke("workspace:get-root"),
   chooseWorkspaceRoot: () => ipcRenderer.invoke("workspace:choose"),
   isGitRepo: () => ipcRenderer.invoke("git:isRepo"),
-  getHeadFileContent: (absPath) => ipcRenderer.invoke("git:getHeadFileContent", { absPath })
+  getHeadFileContent: (absPath) => ipcRenderer.invoke("git:getHeadFileContent", { absPath }),
+  listEnvFiles: () => ipcRenderer.invoke("workspace:list-env-files"),
+  setActiveEnv: (envFileName) => ipcRenderer.invoke("workspace:set-active-env", { envFileName }),
+  ensureMigrationTemplate: () => ipcRenderer.invoke("workspace:ensure-migration-template")
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);
