@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import type { HandlerDetails, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import path from "path";
 import fs from "fs";
@@ -10,7 +10,7 @@ import {
   deleteFlowFile,
   resolveFlowPath
 } from "./fsService";
-import { getFlowsDirectory } from "./constants";
+import { getFlowsDirectory, setWorkspaceRoot, getWorkspaceRoot } from "./constants";
 import { searchInFlows } from "./searchService";
 import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./cliService";
 import type { FlowSummary, FlowFile, TwilioFlowDefinition } from "../shared";
@@ -105,12 +105,25 @@ const registerIpcHandlers = () => {
     return true;
   });
 
-  registerHandler<{ term: string }, Awaited<ReturnType<typeof searchInFlows>>>(
+  registerHandler<{ term: string; fileIds?: string[] }, Awaited<ReturnType<typeof searchInFlows>>>(
     "flows:search",
     async (_event, payload) => {
-      return searchInFlows(payload.term);
+      return searchInFlows(payload.term, payload.fileIds);
     }
   );
+  registerHandler<unknown, { path: string | null }>("workspace:get-root", async () => {
+    return { path: getWorkspaceRoot() };
+  });
+
+  registerHandler<unknown, { path: string | null }>("workspace:choose", async () => {
+    const result = await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { path: null };
+    }
+    const root = result.filePaths[0];
+    setWorkspaceRoot(root);
+    return { path: root };
+  });
 
   // No-op placeholder for future main-process support if needed
   registerHandler<{ widgetName?: string }, boolean>("app:set-active-widget", async () => true);

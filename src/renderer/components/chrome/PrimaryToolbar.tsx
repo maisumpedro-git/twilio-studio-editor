@@ -2,52 +2,37 @@ import { Fragment } from "react";
 import clsx from "clsx";
 
 import { Button, IconButton } from "../ui/Button";
-import {
-  DownloadIcon,
-  RefreshIcon,
-  SearchIcon,
-  JsonIcon,
-  GraphIcon,
-  SplitIcon
-} from "../ui/icons";
-import type { SidebarMode, EditorMode } from "@shared/appManifest";
+import { DownloadIcon, RefreshIcon, SearchIcon, FolderIcon } from "../ui/icons";
+import type { SidebarMode } from "@shared/appManifest";
 
 export type PrimaryToolbarProps = {
   appName: string;
   appVersion: string;
   sidebarMode: SidebarMode;
-  editorMode: EditorMode;
   currentFlowName?: string;
   isFetching: boolean;
   onRefreshFlows: () => void;
   onToggleSidebarMode: () => void;
-  onChangeEditorMode: (mode: EditorMode) => void;
   onDownloadFlows: () => void;
   onSaveFlow: () => void;
   onValidateFlow: () => void;
   onPublishFlow: () => void;
+  onChooseWorkspace?: () => void;
 };
-
-const editorModes: { key: EditorMode; label: string; icon: JSX.Element }[] = [
-  { key: "json", label: "JSON", icon: <JsonIcon /> },
-  { key: "graph", label: "Grafo", icon: <GraphIcon /> },
-  { key: "split", label: "Dividido", icon: <SplitIcon /> }
-];
 
 export const PrimaryToolbar = ({
   appName,
   appVersion,
   sidebarMode,
-  editorMode,
   currentFlowName,
   isFetching,
   onRefreshFlows,
   onToggleSidebarMode,
-  onChangeEditorMode,
   onDownloadFlows,
   onSaveFlow,
   onValidateFlow,
   onPublishFlow
+  , onChooseWorkspace
 }: PrimaryToolbarProps) => {
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/70 px-4 backdrop-blur">
@@ -65,7 +50,7 @@ export const PrimaryToolbar = ({
             variant="ghost"
             icon={<SearchIcon />}
             onClick={onToggleSidebarMode}
-            title={sidebarMode === "explorer" ? "Abrir busca global (Ctrl+F)" : "Voltar para Explorer"}
+            title={sidebarMode === "explorer" ? "Abrir busca global (Ctrl+Shift+F)" : "Voltar para Explorer"}
             isActive={sidebarMode === "global-search"}
           >
             {sidebarMode === "explorer" ? "Busca Global" : "Explorer"}
@@ -80,22 +65,14 @@ export const PrimaryToolbar = ({
             Atualizar
           </IconButton>
         </div>
-        <div className="hidden items-center gap-1 rounded-md border border-slate-800 bg-slate-900/60 p-1 lg:flex">
-          {editorModes.map((mode) => (
-            <Button
-              key={mode.key}
-              variant="ghost"
-              onClick={() => onChangeEditorMode(mode.key)}
-              isActive={editorMode === mode.key}
-              icon={mode.icon}
-              className="px-3"
-            >
-              {mode.label}
-            </Button>
-          ))}
-        </div>
+        {/* Editor mode switch removed (only JSON mode now) */}
       </div>
       <div className="flex items-center gap-2">
+        {onChooseWorkspace ? (
+          <Button variant="ghost" icon={<FolderIcon />} onClick={onChooseWorkspace}>
+            Workspace
+          </Button>
+        ) : null}
         <div className="hidden items-center gap-2 pr-3 text-sm text-slate-400 sm:flex">
           <span className="text-xs uppercase tracking-wide text-slate-600">Fluxo ativo</span>
           <span className="rounded bg-slate-800 px-2 py-0.5 font-medium text-slate-200">

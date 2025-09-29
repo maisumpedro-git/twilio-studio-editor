@@ -13,13 +13,15 @@ export type TwilioStudioAPI = {
   openFlow: (filePath: string) => Promise<FlowFile>;
   saveFlow: (filePath: string, flow: TwilioFlowDefinition) => Promise<FlowFile>;
   deleteFlow: (filePath: string) => Promise<boolean>;
-  searchFlows: (term: string) => Promise<FlowSearchMatch[]>;
+  searchFlows: (term: string, fileIds?: string[]) => Promise<FlowSearchMatch[]>;
   resolveFlowPath: (fileName: string) => Promise<string>;
   downloadAllFlows: () => Promise<{ success: boolean; message: string; flows: FlowSummary[] }>;
   validateFlow: (flow: TwilioFlowDefinition) => Promise<CliResult>;
   publishFlow: (flow: TwilioFlowDefinition) => Promise<CliResult>;
   saveFlowLocally: (flow: TwilioFlowDefinition) => Promise<FlowFile>;
   setActiveWidget: (widgetName?: string) => Promise<boolean>;
+  getWorkspaceRoot: () => Promise<{ path: string | null }>;
+  chooseWorkspaceRoot: () => Promise<{ path: string | null }>;
 };
 
 const api: TwilioStudioAPI = {
@@ -28,13 +30,15 @@ const api: TwilioStudioAPI = {
   openFlow: (filePath) => ipcRenderer.invoke("flows:open", { filePath }),
   saveFlow: (filePath, flow) => ipcRenderer.invoke("flows:save", { filePath, flow }),
   deleteFlow: (filePath) => ipcRenderer.invoke("flows:delete", { filePath }),
-  searchFlows: (term) => ipcRenderer.invoke("flows:search", { term }),
+  searchFlows: (term, fileIds) => ipcRenderer.invoke("flows:search", { term, fileIds }),
   resolveFlowPath: (fileName) => ipcRenderer.invoke("flows:resolve-path", { fileName }),
   downloadAllFlows: () => ipcRenderer.invoke("twilio:download-all"),
   validateFlow: (flow) => ipcRenderer.invoke("twilio:validate-flow", { flow }),
   publishFlow: (flow) => ipcRenderer.invoke("twilio:publish-flow", { flow }),
   saveFlowLocally: (flow) => ipcRenderer.invoke("twilio:save-flow", { flow }),
-  setActiveWidget: (widgetName) => ipcRenderer.invoke("app:set-active-widget", { widgetName })
+  setActiveWidget: (widgetName) => ipcRenderer.invoke("app:set-active-widget", { widgetName }),
+  getWorkspaceRoot: () => ipcRenderer.invoke("workspace:get-root"),
+  chooseWorkspaceRoot: () => ipcRenderer.invoke("workspace:choose")
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);

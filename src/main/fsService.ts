@@ -34,34 +34,39 @@ export const resolveFlowPath = (fileName: string) => {
 };
 
 export const listFlowSummaries = async (): Promise<FlowSummary[]> => {
-  const directory = getFlowsDirectory();
-  await fs.mkdir(directory, { recursive: true });
-  const entries = await fs.readdir(directory, { withFileTypes: true });
-
+  const root = getFlowsDirectory();
+  await fs.mkdir(root, { recursive: true });
   const summaries: FlowSummary[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(FLOW_FILE_EXTENSION)) {
-      continue;
-    }
-    const fullPath = path.join(directory, entry.name);
-    try {
-      const stat = await fs.stat(fullPath);
-      const fileContents = await fs.readFile(fullPath, "utf-8");
-      const parsed: TwilioFlowDefinition = JSON.parse(fileContents);
 
-      summaries.push({
-        id: generateFileId(fullPath),
-        fileName: entry.name,
-        filePath: fullPath,
-        updatedAt: stat.mtimeMs,
-        friendlyName: parsed?.friendlyName ?? entry.name.replace(FLOW_FILE_EXTENSION, ""),
-        hasSid: Boolean(parsed?.sid),
-        sid: parsed?.sid
-      });
-    } catch (error) {
-      console.error(`Failed to parse flow file ${fullPath}`, error);
+  const walk = async (dir: string) => {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.endsWith(FLOW_FILE_EXTENSION)) continue;
+      try {
+        const stat = await fs.stat(fullPath);
+        const fileContents = await fs.readFile(fullPath, "utf-8");
+        const parsed: TwilioFlowDefinition = JSON.parse(fileContents);
+        summaries.push({
+          id: generateFileId(fullPath),
+          fileName: path.relative(root, fullPath),
+          filePath: fullPath,
+          updatedAt: stat.mtimeMs,
+          friendlyName: parsed?.friendlyName ?? path.basename(fullPath).replace(FLOW_FILE_EXTENSION, ""),
+          hasSid: Boolean(parsed?.sid),
+          sid: parsed?.sid
+        });
+      } catch (error) {
+        console.error(`Failed to parse flow file ${fullPath}`, error);
+      }
     }
-  }
+  };
+
+  await walk(root);
 
   summaries.sort((a, b) => b.updatedAt - a.updatedAt);
   return summaries;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { APP_NAME } from "@shared/index";
 import type { FlowSearchMatch } from "@shared/types";
@@ -17,7 +17,6 @@ const App = () => {
 
   const flows = useAppStore((state) => state.flows);
   const sidebarMode = useAppStore((state) => state.sidebarMode);
-  const editorMode = useAppStore((state) => state.editorMode);
   const isFetching = useAppStore((state) => state.isFetching);
   const isSearching = useAppStore((state) => state.isSearching);
   const searchTerm = useAppStore((state) => state.searchTerm);
@@ -35,7 +34,6 @@ const App = () => {
   const publishActiveFlow = useAppStore((state) => state.publishActiveFlow);
   const toggleSidebarMode = useAppStore((state) => state.toggleSidebarMode);
   const setSidebarMode = useAppStore((state) => state.setSidebarMode);
-  const setEditorMode = useAppStore((state) => state.setEditorMode);
   const setSearchTerm = useAppStore((state) => state.setSearchTerm);
   const setSearchResults = useAppStore((state) => state.setSearchResults);
   const performSearch = useAppStore((state) => state.performSearch);
@@ -44,11 +42,23 @@ const App = () => {
   const setActiveSearchMatch = useAppStore((state) => state.setActiveSearchMatch);
   const setActiveWidget = useAppStore((state) => state.setActiveWidget);
   const selectedSearchMatch = useAppStore((state) => state.selectedSearchMatch);
+  const selectedSearchFlowIds = useAppStore((s) => s.selectedSearchFlowIds);
+  const toggleSelectedSearchFlowId = useAppStore((s) => s.toggleSelectedSearchFlowId);
+  const selectAllSearchFlows = useAppStore((s) => s.selectAllSearchFlows);
+  const clearSelectedSearchFlows = useAppStore((s) => s.clearSelectedSearchFlows);
 
   useEffect(() => {
     setVersion(window.twilioStudio.getAppVersion());
     void initialize();
   }, [initialize]);
+
+  const handleChooseWorkspace = async () => {
+    const result = await window.twilioStudio.chooseWorkspaceRoot();
+    if (result?.path) {
+      pushToast({ intent: "success", message: `Workspace: ${result.path}`, timestamp: Date.now() });
+      await refreshFlows();
+    }
+  };
 
   useEffect(() => {
     if (!toast) {
@@ -106,6 +116,45 @@ const App = () => {
 
   const showInitialPrompt = flows.length === 0;
 
+  // Resizable sidebar width
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const raw = localStorage.getItem("sidebarWidth");
+    const n = raw ? Number(raw) : NaN;
+    if (!isFinite(n)) return 288;
+    return Math.max(220, Math.min(600, n));
+  }); // default 72 * 4px
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
+  const latestWidthRef = useRef(sidebarWidth);
+  useEffect(() => {
+    latestWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const dx = e.clientX - startXRef.current;
+      const next = Math.max(220, Math.min(600, startWidthRef.current + dx));
+      setSidebarWidth(next);
+    };
+    const onUp = () => {
+      isDraggingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      // persist width
+      try {
+        localStorage.setItem("sidebarWidth", String(latestWidthRef.current));
+      } catch {}
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
   useHotkeys(
     useMemo(
       () => [
@@ -128,7 +177,7 @@ const App = () => {
           }
         },
         {
-          combo: "mod+f",
+          combo: "mod+shift+f",
           handler: () => {
             setSidebarMode("global-search");
           }
@@ -150,20 +199,20 @@ const App = () => {
         appName={APP_NAME}
         appVersion={version}
         sidebarMode={sidebarMode}
-        editorMode={editorMode}
         currentFlowName={activeFlow?.flow.friendlyName}
         isFetching={isFetching}
         onRefreshFlows={refreshFlows}
         onToggleSidebarMode={toggleSidebarMode}
-        onChangeEditorMode={setEditorMode}
         onDownloadFlows={downloadAllFlows}
         onSaveFlow={saveActiveFlow}
         onValidateFlow={validateActiveFlow}
         onPublishFlow={publishActiveFlow}
+        onChooseWorkspace={handleChooseWorkspace}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <SidebarExplorer
+        <div style={{ width: sidebarWidth }} className="h-full shrink-0">
+          <SidebarExplorer
           mode={sidebarMode}
           flows={flows}
           activeFlowId={activeFlowId}
@@ -171,10 +220,28 @@ const App = () => {
           searchTerm={searchTerm}
           searchResults={searchResults}
           isSearching={isSearching}
+          selectedFlowIds={selectedSearchFlowIds}
           onSelectFlow={handleSelectFlow}
           onChangeSearch={setSearchTerm}
           onToggleMode={toggleSidebarMode}
           onSelectSearchResult={handleSelectSearchResult}
+          onToggleSearchFlowId={toggleSelectedSearchFlowId}
+          onSelectAllSearchFlows={selectAllSearchFlows}
+          onClearSelectedSearchFlows={clearSelectedSearchFlows}
+          />
+        </div>
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          title="Arraste para redimensionar"
+          onMouseDown={(e) => {
+            isDraggingRef.current = true;
+            startXRef.current = e.clientX;
+            startWidthRef.current = sidebarWidth;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
+          className="h-full w-1 cursor-col-resize bg-slate-800/70 hover:bg-slate-700/80"
         />
 
         <main className="relative flex flex-1 overflow-hidden">
@@ -190,13 +257,13 @@ const App = () => {
             </div>
           ) : (
             <WorkspaceSplit
-              mode={editorMode}
+              mode={"json"}
               flow={activeFlow}
               flowId={activeFlowId}
               selectedMatch={selectedSearchMatch}
             />
           )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950 via-transparent to-slate-900/70" />
+          {null}
         </main>
       </div>
 

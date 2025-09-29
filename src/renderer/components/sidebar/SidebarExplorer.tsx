@@ -12,10 +12,14 @@ export type SidebarExplorerProps = {
   searchTerm: string;
   searchResults: FlowSearchMatch[];
   isSearching: boolean;
+  selectedFlowIds?: string[];
   onSelectFlow: (filePath: string) => void;
   onChangeSearch: (value: string) => void;
   onToggleMode: () => void;
   onSelectSearchResult: (match: FlowSearchMatch) => void;
+  onToggleSearchFlowId?: (id: string) => void;
+  onSelectAllSearchFlows?: () => void;
+  onClearSelectedSearchFlows?: () => void;
 };
 
 export const SidebarExplorer = ({
@@ -26,17 +30,21 @@ export const SidebarExplorer = ({
   searchTerm,
   searchResults,
   isSearching,
+  selectedFlowIds,
   onSelectFlow,
   onChangeSearch,
   onToggleMode,
-  onSelectSearchResult
+  onSelectSearchResult,
+  onToggleSearchFlowId,
+  onSelectAllSearchFlows,
+  onClearSelectedSearchFlows
 }: SidebarExplorerProps) => {
   const sortedFlows = useMemo(() => {
     return [...flows].sort((a, b) => b.updatedAt - a.updatedAt);
   }, [flows]);
 
   return (
-    <aside className="flex h-full w-72 flex-col border-r border-slate-800 bg-slate-950/80">
+    <aside className="flex h-full w-full flex-col border-r border-slate-800 bg-slate-950/80">
       <div className="flex items-center justify-between border-b border-slate-900 px-4 py-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {mode === "explorer" ? "Fluxos" : "Busca Global"}
@@ -46,7 +54,7 @@ export const SidebarExplorer = ({
           onClick={onToggleMode}
           className="text-xs text-slate-500 transition hover:text-slate-200"
         >
-          {mode === "explorer" ? "Ctrl+F" : "Esc"}
+          {mode === "explorer" ? "Ctrl+Shift+F" : "Esc"}
         </button>
       </div>
 
@@ -66,6 +74,43 @@ export const SidebarExplorer = ({
               placeholder="Digite para buscar..."
               className="w-full rounded-md border border-slate-800 bg-slate-950/50 py-2 pl-8 pr-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-surface-500 focus:outline-none"
             />
+          </div>
+          <div className="mt-2 rounded-md border border-slate-800 bg-slate-950/30 p-2">
+            <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
+              <span>Filtrar por fluxos</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded px-1.5 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  onClick={onSelectAllSearchFlows}
+                >
+                  Selecionar todos
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-1.5 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  onClick={onClearSelectedSearchFlows}
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+            <div className="max-h-36 space-y-1 overflow-auto pr-1">
+              {sortedFlows.map((flow) => {
+                const checked = selectedFlowIds?.includes(flow.id) ?? false;
+                return (
+                  <label key={flow.id} className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs text-slate-300 hover:bg-slate-900">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggleSearchFlowId?.(flow.id)}
+                      className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-surface-500"
+                    />
+                    <span className="truncate">{flow.friendlyName}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
             <span>Pressione Esc para voltar</span>

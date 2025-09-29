@@ -1,4 +1,4 @@
-import type { FlowSearchMatch, TwilioFlowDefinition, TwilioWidget } from "../shared";
+import type { FlowSearchMatch, FlowSummary, TwilioFlowDefinition, TwilioWidget } from "../shared";
 import { listFlowSummaries, readFlowFile } from "./fsService";
 
 const CONTEXT_RADIUS = 48;
@@ -32,14 +32,18 @@ const indexToLocation = (source: string, index: number) => {
   return { line, column };
 };
 
-export const searchInFlows = async (term: string): Promise<FlowSearchMatch[]> => {
+export const searchInFlows = async (term: string, fileIds?: string[]): Promise<FlowSearchMatch[]> => {
   const trimmed = term.trim();
   if (!trimmed) {
     return [];
   }
 
   const regex = buildRegex(trimmed);
-  const summaries = await listFlowSummaries();
+  let summaries = await listFlowSummaries();
+  if (fileIds && fileIds.length > 0) {
+    const allow = new Set(fileIds);
+    summaries = summaries.filter((s: FlowSummary) => allow.has(s.id));
+  }
   const matches: FlowSearchMatch[] = [];
 
   for (const summary of summaries) {

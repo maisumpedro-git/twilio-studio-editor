@@ -39,6 +39,7 @@ type AppState = {
   isSearching: boolean;
   searchTerm: string;
   searchResults: FlowSearchMatch[];
+  selectedSearchFlowIds: string[]; // empty means all
   activeWidgetName?: string;
   toast?: ToastMessage;
   selectedSearchMatch?: FlowSearchMatch;
@@ -58,6 +59,10 @@ type AppState = {
   setSearchTerm: (term: string) => void;
   setSearchResults: (results: FlowSearchMatch[]) => void;
   performSearch: (term: string) => Promise<void>;
+  setSelectedSearchFlowIds: (ids: string[]) => void;
+  toggleSelectedSearchFlowId: (id: string) => void;
+  selectAllSearchFlows: () => void;
+  clearSelectedSearchFlows: () => void;
   setActiveWidget: (widgetName?: string) => void;
   setActiveSearchMatch: (match?: FlowSearchMatch) => void;
   pushToast: (toast: ToastMessage) => void;
@@ -88,6 +93,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   isSearching: APPLICATION_STATE_BLUEPRINT.isSearching ?? false,
   searchTerm: APPLICATION_STATE_BLUEPRINT.globalSearchTerm,
   searchResults: [],
+  selectedSearchFlowIds: [],
   activeWidgetName: APPLICATION_STATE_BLUEPRINT.activeWidgetName,
   toast: undefined,
   selectedSearchMatch: undefined,
@@ -373,7 +379,8 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
     const api = ensureApi();
   set({ isSearching: true, selectedSearchMatch: undefined });
     try {
-      const results = await api.searchFlows(trimmed);
+      const filterIds = get().selectedSearchFlowIds;
+      const results = await api.searchFlows(trimmed, filterIds.length > 0 ? filterIds : undefined);
       if (get().searchTerm.trim() !== trimmed) {
         set({ isSearching: false });
         return;
@@ -389,6 +396,16 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       });
     }
   },
+  setSelectedSearchFlowIds: (ids: string[]) => set({ selectedSearchFlowIds: ids }),
+  toggleSelectedSearchFlowId: (id: string) =>
+    set((state: AppState) => {
+      const setIds = new Set(state.selectedSearchFlowIds);
+      if (setIds.has(id)) setIds.delete(id);
+      else setIds.add(id);
+      return { selectedSearchFlowIds: Array.from(setIds) };
+    }),
+  selectAllSearchFlows: () => set((state: AppState) => ({ selectedSearchFlowIds: state.flows.map((f) => f.id) })),
+  clearSelectedSearchFlows: () => set({ selectedSearchFlowIds: [] }),
   setActiveWidget: (widgetName?: string) => set({ activeWidgetName: widgetName }),
   setActiveSearchMatch: (match?: FlowSearchMatch) => set({ selectedSearchMatch: match }),
   pushToast: (toast: ToastMessage) => set({ toast }),

@@ -103,3 +103,9 @@ export const SplitIcon = (props: SVGProps<SVGSVGElement>) => (
     <rect x={13} y={4} width={7} height={16} rx={2} />
   </Icon>
 );
+
+export const FolderIcon = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+  </Icon>
+);

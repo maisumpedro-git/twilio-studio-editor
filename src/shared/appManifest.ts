@@ -6,7 +6,6 @@ export const APPLICATION_TECH_STACK = [
   "React 18",
   "TypeScript 5",
   "Monaco Editor",
-  "React Flow",
   "Tailwind CSS",
   "Zustand",
   "Twilio CLI"
@@ -20,12 +19,12 @@ export const APPLICATION_DESIGN_GUIDELINES = [
   "Extensibilidade para futuras automações e integrações"
 ] as const;
 
-export type EditorMode = "json" | "graph" | "split";
+export type EditorMode = "json";
 export type SidebarMode = "explorer" | "global-search";
 
 export const APPLICATION_STATE_BLUEPRINT = {
   sidebarMode: "explorer" as SidebarMode,
-  editorMode: "split" as EditorMode,
+  editorMode: "json" as EditorMode,
   flows: [] as unknown[],
   activeFlowId: undefined as string | undefined,
   activeWidgetName: undefined as string | undefined,
@@ -43,7 +42,7 @@ export const APPLICATION_STATE_BLUEPRINT = {
 export const APP_MANIFEST = {
   name: APP_NAME,
   description:
-    "Editor especializado para fluxos do Twilio Studio com sincronização JSON ↔ grafo e busca avançada.",
+    "Editor especializado para fluxos do Twilio Studio com sincronização JSON e busca avançada.",
   technologies: APPLICATION_TECH_STACK,
   designGuidelines: APPLICATION_DESIGN_GUIDELINES,
   defaultState: APPLICATION_STATE_BLUEPRINT
