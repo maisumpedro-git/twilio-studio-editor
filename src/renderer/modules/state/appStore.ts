@@ -33,6 +33,7 @@ type AppState = {
   flows: FlowSummary[];
   documents: Record<string, FlowDocument>;
   activeFlowId?: string;
+  openTabs: Array<{ id: string; title: string; filePath: string }>;
   sidebarMode: SidebarMode;
   editorMode: EditorMode;
   isFetching: boolean;
@@ -46,6 +47,8 @@ type AppState = {
   initialize: () => Promise<void>;
   refreshFlows: () => Promise<void>;
   openFlow: (filePath: string) => Promise<void>;
+  openFlowInNewTab: (filePath: string) => Promise<void>;
+  closeTab: (id: string) => void;
   downloadAllFlows: () => Promise<void>;
   validateActiveFlow: () => Promise<void>;
   saveActiveFlow: () => Promise<void>;
@@ -80,6 +83,15 @@ const parseJson = (json: string): TwilioFlowDefinition => {
   return JSON.parse(json) as TwilioFlowDefinition;
 };
 
+const addOrActivateTab = (
+  tabs: Array<{ id: string; title: string; filePath: string }>,
+  entry: { id: string; title: string; filePath: string }
+) => {
+  const exists = tabs.some((t) => t.id === entry.id);
+  if (exists) return tabs;
+  return [...tabs, entry];
+};
+
 const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [], AppState> = (
   set: StoreApi<AppState>["setState"],
   get: StoreApi<AppState>["getState"]
@@ -87,6 +99,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   flows: [],
   documents: {},
   activeFlowId: APPLICATION_STATE_BLUEPRINT.activeFlowId,
+  openTabs: [],
   sidebarMode: APPLICATION_STATE_BLUEPRINT.sidebarMode,
   editorMode: APPLICATION_STATE_BLUEPRINT.editorMode,
   isFetching: APPLICATION_STATE_BLUEPRINT.isFetching,
@@ -139,6 +152,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       set((state: AppState) => ({
         documents: { ...state.documents, [file.id]: document },
         activeFlowId: file.id,
+        openTabs: addOrActivateTab(state.openTabs, { id: file.id, title: file.flow.friendlyName || file.id, filePath: file.filePath }),
         flows: state.flows.map((summary: FlowSummary) =>
           summary.id === file.id
             ? {
@@ -159,6 +173,19 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
         timestamp: Date.now()
       });
     }
+  },
+
+  openFlowInNewTab: async (filePath: string) => {
+    // For now, same behavior as openFlow but ensures a new tab entry exists
+    await get().openFlow(filePath);
+  },
+
+  closeTab: (id: string) => {
+    set((state: AppState) => {
+      const remaining = state.openTabs.filter((t) => t.id !== id);
+      const newActive = state.activeFlowId === id ? remaining[remaining.length - 1]?.id : state.activeFlowId;
+      return { openTabs: remaining, activeFlowId: newActive };
+    });
   },
 
   downloadAllFlows: async () => {

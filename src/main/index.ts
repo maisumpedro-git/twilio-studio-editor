@@ -13,6 +13,7 @@ import {
 import { getFlowsDirectory, setWorkspaceRoot, getWorkspaceRoot } from "./constants";
 import { searchInFlows } from "./searchService";
 import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./cliService";
+import { getHeadFileContent, isGitRepo } from "./gitService";
 import type { FlowSummary, FlowFile, TwilioFlowDefinition } from "../shared";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -150,6 +151,19 @@ const registerIpcHandlers = () => {
   registerHandler<{ flow: TwilioFlowDefinition }, Awaited<ReturnType<typeof saveFlowLocally>>>(
     "twilio:save-flow",
     async (_event, payload) => saveFlowLocally(payload.flow)
+  );
+
+  // Git integration
+  registerHandler<unknown, boolean>("git:isRepo", async () => {
+    try {
+      return isGitRepo();
+    } catch {
+      return false;
+    }
+  });
+  registerHandler<{ absPath: string }, Awaited<ReturnType<typeof getHeadFileContent>>>(
+    "git:getHeadFileContent",
+    async (_event, payload) => getHeadFileContent(payload.absPath)
   );
 };
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Editor, { type Monaco } from "@monaco-editor/react";
+import Editor, { DiffEditor, type Monaco } from "@monaco-editor/react";
 import type * as MonacoEditor from "monaco-editor";
 import type { EditorMode, FlowFile } from "@shared/index";
 import type { FlowSearchMatch } from "@shared/types";
@@ -19,6 +19,9 @@ export const WorkspaceSplit = ({ mode, flow, flowId, selectedMatch }: WorkspaceS
   const editorRef = useRef<MonacoEditor.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const setActiveWidget = useAppStore((s) => s.setActiveWidget);
+  const [isGitRepo, setIsGitRepo] = useState<boolean>(false);
+  const [headContent, setHeadContent] = useState<string | null>(null);
+  const [showDiff, setShowDiff] = useState<boolean>(false);
   const [hoverMenu, setHoverMenu] = useState<{
     x: number;
     y: number;
@@ -55,6 +58,43 @@ export const WorkspaceSplit = ({ mode, flow, flowId, selectedMatch }: WorkspaceS
     setJsonDecorations(newDecos);
     editor.revealLineInCenter(startLine);
   }, [selectedMatch]);
+
+  // Git: detect repo and fetch HEAD for current file
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const repo = await window.twilioStudio.isGitRepo();
+        if (cancelled) return;
+        setIsGitRepo(Boolean(repo));
+      } catch {
+        setIsGitRepo(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isGitRepo || !flow?.id) {
+        setHeadContent(null);
+        return;
+      }
+      try {
+        const res = await window.twilioStudio.getHeadFileContent(flow.filePath);
+        if (cancelled) return;
+        setHeadContent(res.existsInHead ? res.content : null);
+      } catch {
+        if (!cancelled) setHeadContent(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isGitRepo, flow?.id, flow?.filePath]);
 
   // JSON editor: click on "next": "WidgetX" navigates to widget definition
   useEffect(() => {
@@ -125,7 +165,17 @@ export const WorkspaceSplit = ({ mode, flow, flowId, selectedMatch }: WorkspaceS
 
   const editorPane = (
     <div className="h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40">
-      <Editor
+      {showDiff && headContent != null ? (
+        <DiffEditor
+          height="100%"
+          theme="vs-dark"
+          language="json"
+          original={headContent}
+          modified={typeof docJson === "string" ? docJson : flow ? JSON.stringify(flow.flow, null, 2) : ""}
+          options={{ renderSideBySide: true, readOnly: false, minimap: { enabled: false }, scrollBeyondLastLine: false }}
+        />
+      ) : (
+        <Editor
         height="100%"
         defaultLanguage="json"
         theme="vs-dark"
@@ -136,7 +186,16 @@ export const WorkspaceSplit = ({ mode, flow, flowId, selectedMatch }: WorkspaceS
           monacoRef.current = monaco;
         }}
         options={{ minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false }}
-      />
+        />
+      )}
+      {(isGitRepo && headContent != null) ? (
+        <div className="pointer-events-auto absolute right-3 top-3 z-20">
+          <label className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-800 bg-slate-900/80 px-2 py-1 text-xs text-slate-300">
+            <input type="checkbox" checked={showDiff} onChange={(e) => setShowDiff(e.target.checked)} />
+            Mostrar diff com HEAD
+          </label>
+        </div>
+      ) : null}
       {hoverMenu ? (
         <div
           className="pointer-events-auto fixed z-50 rounded-md border border-slate-800 bg-slate-900/95 p-2 text-xs shadow-lg"

@@ -7,6 +7,7 @@ import { useAppStore, selectActiveFlow } from "./modules/state/appStore";
 import { PrimaryToolbar } from "./components/chrome/PrimaryToolbar";
 import { SidebarExplorer } from "./components/sidebar/SidebarExplorer";
 import { WorkspaceSplit } from "./components/workspace/WorkspaceSplit";
+import { TabsBar } from "./components/workspace/TabsBar";
 import { InitialPrompt } from "./components/workspace/InitialPrompt";
 import { StatusBar } from "./components/chrome/StatusBar";
 import { Toast } from "./components/ui/Toast";
@@ -28,6 +29,8 @@ const App = () => {
   const initialize = useAppStore((state) => state.initialize);
   const refreshFlows = useAppStore((state) => state.refreshFlows);
   const openFlow = useAppStore((state) => state.openFlow);
+  const openFlowInNewTab = useAppStore((s) => s.openFlowInNewTab);
+  const closeTab = useAppStore((s) => s.closeTab);
   const downloadAllFlows = useAppStore((state) => state.downloadAllFlows);
   const validateActiveFlow = useAppStore((state) => state.validateActiveFlow);
   const saveActiveFlow = useAppStore((state) => state.saveActiveFlow);
@@ -42,6 +45,7 @@ const App = () => {
   const setActiveSearchMatch = useAppStore((state) => state.setActiveSearchMatch);
   const setActiveWidget = useAppStore((state) => state.setActiveWidget);
   const selectedSearchMatch = useAppStore((state) => state.selectedSearchMatch);
+  const openTabs = useAppStore((s) => s.openTabs);
   const selectedSearchFlowIds = useAppStore((s) => s.selectedSearchFlowIds);
   const toggleSelectedSearchFlowId = useAppStore((s) => s.toggleSelectedSearchFlowId);
   const selectAllSearchFlows = useAppStore((s) => s.selectAllSearchFlows);
@@ -222,6 +226,7 @@ const App = () => {
           isSearching={isSearching}
           selectedFlowIds={selectedSearchFlowIds}
           onSelectFlow={handleSelectFlow}
+          onOpenFlowInNewTab={(fp) => void openFlowInNewTab(fp)}
           onChangeSearch={setSearchTerm}
           onToggleMode={toggleSidebarMode}
           onSelectSearchResult={handleSelectSearchResult}
@@ -244,7 +249,13 @@ const App = () => {
           className="h-full w-1 cursor-col-resize bg-slate-800/70 hover:bg-slate-700/80"
         />
 
-        <main className="relative flex flex-1 overflow-hidden">
+        <main className="relative flex flex-1 overflow-hidden flex-col">
+          <TabsBar
+            tabs={openTabs}
+            activeId={activeFlowId}
+            onActivate={(id) => useAppStore.getState().setActiveFlow(id)}
+            onClose={(id) => closeTab(id)}
+          />
           {showInitialPrompt ? (
             <div className="relative z-10 flex-1 overflow-y-auto p-10">
               <InitialPrompt

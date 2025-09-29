@@ -22,6 +22,8 @@ export type TwilioStudioAPI = {
   setActiveWidget: (widgetName?: string) => Promise<boolean>;
   getWorkspaceRoot: () => Promise<{ path: string | null }>;
   chooseWorkspaceRoot: () => Promise<{ path: string | null }>;
+  isGitRepo: () => Promise<boolean>;
+  getHeadFileContent: (absPath: string) => Promise<{ existsInHead: boolean; content: string }>;
 };
 
 const api: TwilioStudioAPI = {
@@ -38,7 +40,9 @@ const api: TwilioStudioAPI = {
   saveFlowLocally: (flow) => ipcRenderer.invoke("twilio:save-flow", { flow }),
   setActiveWidget: (widgetName) => ipcRenderer.invoke("app:set-active-widget", { widgetName }),
   getWorkspaceRoot: () => ipcRenderer.invoke("workspace:get-root"),
-  chooseWorkspaceRoot: () => ipcRenderer.invoke("workspace:choose")
+  chooseWorkspaceRoot: () => ipcRenderer.invoke("workspace:choose"),
+  isGitRepo: () => ipcRenderer.invoke("git:isRepo"),
+  getHeadFileContent: (absPath) => ipcRenderer.invoke("git:getHeadFileContent", { absPath })
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);
