@@ -8,6 +8,8 @@ import { VariablesPanel } from "./components/workspace/VariablesPanel";
 import { PublishReviewModal } from "./components/workspace/PublishReviewModal";
 import { ToolsMenuBar } from "./components/chrome/ToolsMenuBar";
 import { MappingCreateModal } from "./components/workspace/MappingCreateModal";
+import { ExtractionPatternModal, type ExtractionPatterns } from "./components/workspace/ExtractionPatternModal";
+import { collectStringValuesWithPath, isInterestingValue, suggestVarName } from "./utils/valueExtraction";
 import { PrimaryToolbar } from "./components/chrome/PrimaryToolbar";
 import { SidebarExplorer } from "./components/sidebar/SidebarExplorer";
 import { WorkspaceSplit } from "./components/workspace/WorkspaceSplit";
@@ -46,6 +48,7 @@ const App = () => {
   const openMappingCreate = useAppStore((s) => s.openMappingCreate);
   const closeMappingCreate = useAppStore((s) => s.closeMappingCreate);
   const confirmMappingCreate = useAppStore((s) => s.confirmMappingCreate);
+  const [showPatternModal, setShowPatternModal] = useState(false);
   const setSidebarMode = useAppStore((state) => state.setSidebarMode);
   const setSearchTerm = useAppStore((state) => state.setSearchTerm);
   const setSearchResults = useAppStore((state) => state.setSearchResults);
@@ -217,7 +220,7 @@ const App = () => {
   return (
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100">
       {/* Top menu */}
-      <ToolsMenuBar onMappingCreate={() => void openMappingCreate()} />
+      <ToolsMenuBar onMappingCreate={() => { setShowPatternModal(true); }} />
 
       <PrimaryToolbar
         appName={APP_NAME}
@@ -330,6 +333,36 @@ const App = () => {
         onCancel={() => useAppStore.setState((s) => ({ ui: { ...s.ui, publishReview: { ...s.ui.publishReview, open: false } } }))}
   onConfirm={(values: Record<string, string>) => void confirmPublishWithValues(values)}
         onRegenerateMapping={() => void window.twilioStudio.generateMappings().then(() => openPublishReview())}
+      />
+
+      {/* Extraction patterns modal */}
+      <ExtractionPatternModal
+        open={showPatternModal}
+        onCancel={() => setShowPatternModal(false)}
+        onConfirm={async (patterns: ExtractionPatterns) => {
+          setShowPatternModal(false);
+          // Compute candidates using patterns
+          const state = useAppStore.getState();
+          const doc = state.activeFlowId ? state.documents[state.activeFlowId] : undefined;
+          if (!doc?.file) {
+            state.pushToast({ intent: "info", message: "Abra um fluxo para criar variáveis.", timestamp: Date.now() });
+            return;
+          }
+          const flow = JSON.parse(doc.json);
+          const existingFlat = await window.twilioStudio.getMappingFlat().catch(() => ({} as Record<string, string>));
+          const all = collectStringValuesWithPath(flow.definition);
+          const keysLower = new Set((patterns.keyIncludes || []).map((k) => k.toLowerCase()));
+          const extraRegexes = (patterns.regexes || []).map((r) => { try { return new RegExp(r, "i"); } catch { return null; } }).filter(Boolean) as RegExp[];
+          const filtered = all.filter((c) => {
+            const keyOk = c.key ? Array.from(keysLower).some((kw) => c.key!.toLowerCase().includes(kw)) : false;
+            const regexOk = extraRegexes.some((re) => re.test(c.value));
+            return keyOk || regexOk || isInterestingValue(c.value);
+          });
+          const uniqueValues: string[] = Array.from(new Set(filtered.map((c) => c.value))).filter((v) => !Object.values(existingFlat).includes(v));
+          const prefill: Record<string, string> = {};
+          for (const v of uniqueValues) prefill[v] = suggestVarName(v);
+          useAppStore.setState((s) => ({ ui: { ...s.ui, mappingCreate: { open: true, values: uniqueValues, prefill, existingFlat } } }));
+        }}
       />
 
       {/* Mapping create modal */}

@@ -4,22 +4,27 @@ export type ValueCandidate = {
   value: string;
 };
 
-export const collectStringValuesWithPath = (obj: any, basePath = "$", out: ValueCandidate[] = []): ValueCandidate[] => {
+export const collectStringValuesWithPath = (
+  obj: any,
+  basePath = "$",
+  out: ValueCandidate[] = [],
+  currentKey?: string
+): ValueCandidate[] => {
   if (obj == null) return out;
   if (Array.isArray(obj)) {
     for (let i = 0; i < obj.length; i++) {
-      collectStringValuesWithPath(obj[i], `${basePath}[${i}]`, out);
+      collectStringValuesWithPath(obj[i], `${basePath}[${i}]`, out, currentKey);
     }
     return out;
   }
   if (typeof obj === "object") {
     for (const k of Object.keys(obj)) {
-      collectStringValuesWithPath(obj[k], `${basePath}.${k}`, out);
+      collectStringValuesWithPath(obj[k], `${basePath}.${k}`, out, k);
     }
     return out;
   }
   if (typeof obj === "string") {
-    out.push({ path: basePath, value: obj });
+    out.push({ path: basePath, key: currentKey, value: obj });
   }
   return out;
 };
