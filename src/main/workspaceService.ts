@@ -27,7 +27,9 @@ export const setActiveEnv = (envFileName: string) => {
 
 export const ensureMigrationTemplate = () => {
   const root = getWorkspaceRoot();
-  const scriptPath = path.join(root, "migration.template.js");
+  const scriptsDir = path.join(root, "scripts");
+  fs.mkdirSync(scriptsDir, { recursive: true });
+  const scriptPath = path.join(scriptsDir, "migration.template.js");
   if (!fs.existsSync(scriptPath)) {
     const content = [
       "// Migration template: replace values in JSON flows with token format: '${tse.vars.var_name}'.",
@@ -36,11 +38,12 @@ export const ensureMigrationTemplate = () => {
       "const fs = require('fs');",
       "const path = require('path');",
       "",
-      "function loadMapping(root, env) {",
-      "  const file = path.join(",
-      "    root,",
-      "    env === 'dev' ? 'mapping-dev.json' : env === 'qa' ? 'mapping-qa.json' : 'mapping-prod.json'",
-      "  );",
+  "function loadMapping(root, env) {",
+  "  const file = path.join(",
+  "    root,",
+  "    'scripts',",
+  "    env === 'dev' ? 'mapping-dev.json' : env === 'qa' ? 'mapping-qa.json' : 'mapping-prod.json'",
+  "  );",
       "  if (!fs.existsSync(file)) return {};",
       "  try { return JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { return {}; }",
       "}",

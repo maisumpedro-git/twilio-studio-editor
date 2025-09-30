@@ -11,6 +11,7 @@ import type {
   SidebarMode
 } from "@shared/index";
 import { APPLICATION_STATE_BLUEPRINT } from "@shared/appManifest";
+import { collectFlowTokens, substituteTokens } from "@shared/tokenUtils";
 
 export type FlowDocument = {
   file: FlowFile;
@@ -53,6 +54,8 @@ type AppState = {
   validateActiveFlow: () => Promise<void>;
   saveActiveFlow: () => Promise<void>;
   publishActiveFlow: () => Promise<void>;
+  openPublishReview: () => Promise<void>;
+  confirmPublishWithValues: (values: Record<string, string>) => Promise<void>;
   setActiveFlow: (flowId: string) => void;
   updateDocumentJson: (flowId: string, json: string) => void;
   markSaved: (flowId: string, file: FlowFile) => void;
@@ -70,6 +73,19 @@ type AppState = {
   setActiveSearchMatch: (match?: FlowSearchMatch) => void;
   pushToast: (toast: ToastMessage) => void;
   clearToast: () => void;
+  ui: {
+    publishReview: {
+      open: boolean;
+      tokens: string[];
+      mapping: Record<string, string>;
+      empties: string[];
+    };
+    rightPanel: {
+      open: boolean;
+      tab: "variables" | "info";
+      flowTokens: string[];
+    };
+  };
 };
 
 const ensureApi = () => {
@@ -110,6 +126,10 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   activeWidgetName: APPLICATION_STATE_BLUEPRINT.activeWidgetName,
   toast: undefined,
   selectedSearchMatch: undefined,
+  ui: {
+    publishReview: { open: false, tokens: [], mapping: {}, empties: [] },
+    rightPanel: { open: false, tab: "variables", flowTokens: [] }
+  },
 
   initialize: async () => {
     await get().refreshFlows();
@@ -130,7 +150,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       set({ isFetching: false });
       get().pushToast({
         intent: "error",
-        message: "Não foi possível carregar os fluxos. Verifique o Twilio CLI.",
+        message: "Não foi possível carregar os fluxos. Verifique as credenciais no .env.",
         timestamp: Date.now()
       });
     }
@@ -163,7 +183,15 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
                 sid: file.flow.sid ?? summary.sid
               }
             : summary
-        )
+        ),
+        ui: {
+          ...state.ui,
+          rightPanel: {
+            ...state.ui.rightPanel,
+            open: true,
+            flowTokens: collectFlowTokens(file.flow)
+          }
+        }
       }));
     } catch (error) {
       console.error(`Failed to open flow ${filePath}`, error);
@@ -210,7 +238,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       set({ isFetching: false });
       get().pushToast({
         intent: "error",
-        message: "Erro ao baixar fluxos. Verifique o Twilio CLI.",
+        message: "Erro ao baixar fluxos. Verifique as credenciais no .env.",
         timestamp: Date.now()
       });
     }
@@ -233,7 +261,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       const result = await api.validateFlow(flow);
       get().pushToast({
         intent: result.success ? "success" : "error",
-        message: result.success ? "Fluxo válido segundo o Twilio CLI." : result.stderr || "Falha na validação.",
+        message: result.success ? "Fluxo válido." : result.stderr || "Falha na validação.",
         timestamp: Date.now()
       });
       set((state: AppState) => ({
@@ -290,6 +318,11 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   },
 
   publishActiveFlow: async () => {
+    // Open the publish review modal first
+    await get().openPublishReview();
+  },
+
+  openPublishReview: async () => {
     const api = ensureApi();
     const document = selectActiveDocument(get());
     if (!document) {
@@ -300,23 +333,52 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       });
       return;
     }
-
     try {
       const flow = parseJson(document.json);
-      if (!flow.sid) {
-        throw new Error("Flow SID é obrigatório para publicar.");
+      if (!flow.sid) throw new Error("Flow SID é obrigatório para publicar.");
+      const tokens = collectFlowTokens(flow);
+      let mapping: Record<string, string> = {};
+      try {
+        mapping = await api.getMappingFlat();
+      } catch {
+        mapping = {};
       }
-      const result = await api.publishFlow(flow);
+      const empties = tokens.filter((t) => !mapping[t] || String(mapping[t]).trim() === "");
+      set((state: AppState) => ({
+        ui: { ...state.ui, publishReview: { open: true, tokens, mapping, empties } }
+      }));
+    } catch (error) {
+      console.error("Failed to prepare publish review", error);
+      get().pushToast({
+        intent: "error",
+        message: error instanceof Error ? error.message : "Erro ao preparar revisão de publicação.",
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  confirmPublishWithValues: async (values: Record<string, string>) => {
+    const api = ensureApi();
+    const document = selectActiveDocument(get());
+    if (!document) return;
+    try {
+      const flow = parseJson(document.json);
+      if (!flow.sid) throw new Error("Flow SID é obrigatório para publicar.");
+      const newDef = substituteTokens(flow.definition, values);
+      const toPublish = { ...flow, definition: newDef };
+      const result = await api.publishFlow(toPublish);
       get().pushToast({
         intent: result.success ? "success" : "error",
         message: result.success ? "Fluxo publicado com sucesso." : result.stderr || "Falha na publicação.",
         timestamp: Date.now()
       });
+      // Close modal
+      set((state: AppState) => ({ ui: { ...state.ui, publishReview: { ...state.ui.publishReview, open: false } } }));
       if (result.success) {
         await get().refreshFlows();
       }
     } catch (error) {
-      console.error("Failed to publish flow", error);
+      console.error("Failed to publish flow with values", error);
       get().pushToast({
         intent: "error",
         message: error instanceof Error ? error.message : "Erro ao publicar fluxo.",

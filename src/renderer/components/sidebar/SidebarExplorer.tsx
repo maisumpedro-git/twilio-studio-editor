@@ -144,7 +144,7 @@ export const SidebarExplorer = ({
           <div className="px-2 py-3">
             {sortedFlows.length === 0 ? (
               <div className="rounded-md border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-xs text-slate-500">
-                {isFetching ? "Carregando fluxos..." : "Nenhum fluxo encontrado. Baixe pelo Twilio CLI."}
+                {isFetching ? "Carregando fluxos..." : "Nenhum fluxo encontrado. Baixe via API com credenciais do .env."}
               </div>
             ) : (
               <TreeView

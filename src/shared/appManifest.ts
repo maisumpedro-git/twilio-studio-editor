@@ -8,7 +8,7 @@ export const APPLICATION_TECH_STACK = [
   "Monaco Editor",
   "Tailwind CSS",
   "Zustand",
-  "Twilio CLI"
+  "Twilio REST API"
 ] as const;
 
 export const APPLICATION_DESIGN_GUIDELINES = [

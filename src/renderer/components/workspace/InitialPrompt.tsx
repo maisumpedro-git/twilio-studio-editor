@@ -79,7 +79,7 @@ export const InitialPrompt = ({
             <ul className="mt-2 space-y-1">
               <li className="flex items-start gap-2">
                 <span className="mt-1 h-1.5 w-1.5 rounded-full bg-surface-500" />
-                <span>Baixe todos os fluxos com o Twilio CLI instalado.</span>
+                <span>Configure o .env do workspace com TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN e baixe todos os fluxos via API.</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 h-1.5 w-1.5 rounded-full bg-surface-500" />
@@ -97,7 +97,7 @@ export const InitialPrompt = ({
       <section className="grid gap-4 lg:grid-cols-3">
         <QuickAction
           title="Baixar fluxos do Twilio"
-          description="Sincronize o diretório local com os fluxos publicados na sua conta através do Twilio CLI."
+          description="Sincronize o diretório local com os fluxos publicados na sua conta via REST API, usando credenciais do .env."
           icon={<DownloadIcon className="h-5 w-5" />}
           action={
             <Button onClick={onDownloadFlows} disabled={isFetching} icon={<DownloadIcon />}>
@@ -131,7 +131,7 @@ export const InitialPrompt = ({
         <div className="flex flex-wrap items-center gap-3">
           <FlowIcon className="h-5 w-5 text-surface-400" />
           <p>
-            Precisando importar um fluxo manualmente? Utilize o comando <code className="rounded bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200">twilio api:studio:v2:flows:fetch --sid XXX --output json</code> e salve o arquivo em <span className="text-slate-300">%APPDATA%/Twilio Studio Editor/flows</span>.
+            Para configurar migração, mantenha seu .env atualizado e gere os arquivos de mapping pelo menu do workspace. Depois, valide e publique os fluxos.
           </p>
         </div>
       </div>

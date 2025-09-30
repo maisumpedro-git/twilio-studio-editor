@@ -27,8 +27,10 @@ export type TwilioStudioAPI = {
   listEnvFiles: () => Promise<Array<{ name: string; path: string }>>;
   setActiveEnv: (envFileName: string) => Promise<{ success: true }>;
   ensureMigrationTemplate: () => Promise<{ path: string }>;
+  generateMappings: () => Promise<{ path: string; products: string[] }>;
+  getMapping: () => Promise<Record<string, Record<string, string>>>;
+  getMappingFlat: () => Promise<Record<string, string>>;
 };
-
 const api: TwilioStudioAPI = {
   getAppVersion: () => ipcRenderer.sendSync("app/version"),
   listFlows: () => ipcRenderer.invoke("flows:list"),
@@ -48,7 +50,10 @@ const api: TwilioStudioAPI = {
   getHeadFileContent: (absPath) => ipcRenderer.invoke("git:getHeadFileContent", { absPath }),
   listEnvFiles: () => ipcRenderer.invoke("workspace:list-env-files"),
   setActiveEnv: (envFileName) => ipcRenderer.invoke("workspace:set-active-env", { envFileName }),
-  ensureMigrationTemplate: () => ipcRenderer.invoke("workspace:ensure-migration-template")
+  ensureMigrationTemplate: () => ipcRenderer.invoke("workspace:ensure-migration-template"),
+  generateMappings: () => ipcRenderer.invoke("twilio:generate-mappings"),
+  getMapping: () => ipcRenderer.invoke("twilio:get-mapping"),
+  getMappingFlat: () => ipcRenderer.invoke("twilio:get-mapping-flat")
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);

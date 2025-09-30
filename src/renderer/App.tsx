@@ -4,6 +4,8 @@ import { APP_NAME } from "@shared/index";
 import type { FlowSearchMatch } from "@shared/types";
 
 import { useAppStore, selectActiveFlow } from "./modules/state/appStore";
+import { VariablesPanel } from "./components/workspace/VariablesPanel";
+import { PublishReviewModal } from "./components/workspace/PublishReviewModal";
 import { PrimaryToolbar } from "./components/chrome/PrimaryToolbar";
 import { SidebarExplorer } from "./components/sidebar/SidebarExplorer";
 import { WorkspaceSplit } from "./components/workspace/WorkspaceSplit";
@@ -36,6 +38,9 @@ const App = () => {
   const saveActiveFlow = useAppStore((state) => state.saveActiveFlow);
   const publishActiveFlow = useAppStore((state) => state.publishActiveFlow);
   const toggleSidebarMode = useAppStore((state) => state.toggleSidebarMode);
+  const ui = useAppStore((s) => s.ui);
+  const openPublishReview = useAppStore((s) => s.openPublishReview);
+  const confirmPublishWithValues = useAppStore((s) => s.confirmPublishWithValues);
   const setSidebarMode = useAppStore((state) => state.setSidebarMode);
   const setSearchTerm = useAppStore((state) => state.setSearchTerm);
   const setSearchResults = useAppStore((state) => state.setSearchResults);
@@ -274,7 +279,13 @@ const App = () => {
               selectedMatch={selectedSearchMatch}
             />
           )}
-          {null}
+          {/* Right side expandable panel */}
+          <VariablesPanel
+            isOpen={ui.rightPanel.open}
+            flow={activeFlow?.flow}
+            onClose={() => useAppStore.setState((s) => ({ ui: { ...s.ui, rightPanel: { ...s.ui.rightPanel, open: false } } }))}
+            onOpenChange={(open: boolean) => useAppStore.setState((s) => ({ ui: { ...s.ui, rightPanel: { ...s.ui.rightPanel, open } } }))}
+          />
         </main>
       </div>
 
@@ -285,6 +296,17 @@ const App = () => {
         searchTerm={searchTerm}
         isSearching={isSearching}
         searchResultsCount={searchResults.length}
+      />
+
+      {/* Publish review modal */}
+      <PublishReviewModal
+        open={ui.publishReview.open}
+        tokens={ui.publishReview.tokens}
+        mapping={ui.publishReview.mapping}
+        empties={ui.publishReview.empties}
+        onCancel={() => useAppStore.setState((s) => ({ ui: { ...s.ui, publishReview: { ...s.ui.publishReview, open: false } } }))}
+  onConfirm={(values: Record<string, string>) => void confirmPublishWithValues(values)}
+        onRegenerateMapping={() => void window.twilioStudio.generateMappings().then(() => openPublishReview())}
       />
 
       {toast ? (

@@ -24,7 +24,7 @@ const makeFlow = (id: string, name: string): FlowFile => ({
   updatedAt: Date.now(),
   flow: {
     sid: `FW${id}`,
-    friendly_name: name,
+    friendlyName: name,
     definition: { states: [], initial_state: "Start" }
   } as unknown as TwilioFlowDefinition
 });
@@ -49,7 +49,7 @@ describe("appStore actions", () => {
         return makeFlow(id, name);
       }),
       saveFlow: vi.fn().mockImplementation(async (_filePath: string, flow: TwilioFlowDefinition) => {
-        return makeFlow("1", flow.friendly_name || "Saved");
+        return makeFlow("1", (flow as any).friendlyName || "Saved");
       }),
       deleteFlow: vi.fn().mockResolvedValue(true),
       searchFlows: vi.fn().mockResolvedValue([
@@ -76,7 +76,7 @@ describe("appStore actions", () => {
     const { activeFlowId, documents } = useAppStore.getState();
     expect(activeFlowId).toBe("1");
     expect(documents["1"]).toBeTruthy();
-    expect(JSON.parse(documents["1"].json).friendly_name).toBe("A");
+  expect(JSON.parse(documents["1"].json).friendlyName).toBe("A");
   });
 
   it("performSearch sets results and clears searching", async () => {
