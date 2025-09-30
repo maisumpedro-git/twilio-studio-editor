@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { FlowSummary, SidebarMode, FlowSearchMatch } from "@shared/index";
 import { SearchIcon, FlowIcon } from "../ui/icons";
+import { useAppStore } from "@renderer/modules/state/appStore";
+import { collectFlowTokens } from "@shared/tokenUtils";
 import { TreeView, buildTree } from "./TreeView";
 
 export type SidebarExplorerProps = {
@@ -42,6 +44,8 @@ export const SidebarExplorer = ({
   onClearSelectedSearchFlows,
   onOpenFlowInNewTab
 }: SidebarExplorerProps) => {
+  const ui = useAppStore((s) => s.ui);
+  const setUi = useAppStore.setState;
   const sortedFlows = useMemo(() => {
     return [...flows].sort((a, b) => b.updatedAt - a.updatedAt);
   }, [flows]);
@@ -50,6 +54,22 @@ export const SidebarExplorer = ({
     () => buildTree(sortedFlows.map((f) => ({ fileName: f.fileName, filePath: f.filePath, friendlyName: f.friendlyName }))),
     [sortedFlows]
   );
+
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const flat = await window.twilioStudio.getMappingFlat();
+        if (mounted) setMapping(flat || {});
+      } catch {
+        if (mounted) setMapping({});
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [activeFlowId]);
 
   return (
     <aside className="flex h-full w-full flex-col border-r border-slate-800 bg-slate-950/80">
@@ -154,6 +174,27 @@ export const SidebarExplorer = ({
                 onOpenInNewTab={onOpenFlowInNewTab}
               />
             )}
+            <div className="mt-3 rounded-md border border-slate-800 bg-slate-950/40 p-2">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-[11px] uppercase tracking-wide text-slate-500">Variáveis do fluxo</div>
+                <button
+                  type="button"
+                  className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800"
+                  onClick={() => {
+                    const open = !ui.rightPanel.open; // reuse flag to show/hide within sidebar
+                    setUi((s) => ({ ui: { ...s.ui, rightPanel: { ...s.ui.rightPanel, open } } }));
+                  }}
+                >
+                  {ui.rightPanel.open ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
+              {ui.rightPanel.open ? (
+                <FlowVariablesList activeFlowId={activeFlowId} mapping={mapping} />
+              ) : (
+                <div className="text-xs text-slate-500">Oculto</div>
+              )}
+            </div>
+
             <WorkspaceSettingsBlock />
           </div>
         ) : (
@@ -280,6 +321,38 @@ function WorkspaceSettingsBlock() {
         ) : null}
       </ul>
       {msg ? <div className="text-[11px] text-slate-500">{msg}</div> : null}
+    </div>
+  );
+}
+
+function FlowVariablesList({ activeFlowId, mapping }: { activeFlowId?: string; mapping: Record<string, string> }) {
+  const doc = useAppStore((s) => (activeFlowId ? s.documents[activeFlowId] : undefined));
+  const tokens = useMemo(() => (doc?.file ? collectFlowTokens(doc.file.flow) : []), [doc?.file?.id, doc?.file?.updatedAt]);
+  const empties = tokens.filter((t) => !mapping[t] || String(mapping[t]).trim() === "");
+
+  if (!doc?.file) {
+    return <div className="text-xs text-slate-500">Abra um fluxo para ver as variáveis.</div>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs text-slate-400">Encontradas ({tokens.length})</div>
+      <ul className="max-h-40 space-y-1 overflow-auto pr-1">
+        {tokens.map((t) => (
+          <li key={t} className="flex items-center justify-between rounded bg-slate-900 px-2 py-1">
+            <span className="text-xs text-slate-200">{t}</span>
+            <span className="text-xs text-slate-400">{mapping[t] || ""}</span>
+          </li>
+        ))}
+        {tokens.length === 0 ? <li className="text-xs text-slate-500">Nenhuma variável encontrada.</li> : null}
+      </ul>
+      <div className="text-xs text-slate-400">Vazias ({empties.length})</div>
+      <ul className="max-h-20 space-y-1 overflow-auto pr-1">
+        {empties.map((t) => (
+          <li key={t} className="rounded bg-yellow-900/20 px-2 py-1 text-xs text-yellow-300">{t}</li>
+        ))}
+        {empties.length === 0 ? <li className="text-xs text-slate-500">Nenhuma.</li> : null}
+      </ul>
     </div>
   );
 }

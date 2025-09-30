@@ -20,6 +20,13 @@ body {
   border-radius: 2px;
 }
 
+/* subtle highlight for ${tse.vars.*} tokens */
+.tw-token-highlight {
+  background-color: rgba(250, 204, 21, 0.15); /* amber-400 at 15% */
+  outline: 1px dashed rgba(250, 204, 21, 0.35);
+  border-radius: 2px;
+}
+
 /* React Flow dark background compatibility */
 .react-flow__renderer, .react-flow__viewport {
   color: #e2e8f0;

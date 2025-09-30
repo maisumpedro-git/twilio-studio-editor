@@ -16,6 +16,7 @@ export const WorkspaceSplit = ({ mode, flow, flowId, selectedMatch }: WorkspaceS
   const updateDocumentJson = useAppStore((s) => s.updateDocumentJson);
   const docJson = useAppStore((s) => (flowId ? s.documents[flowId]?.json : undefined));
   const [jsonDecorations, setJsonDecorations] = useState<string[]>([]);
+  const [tokenDecorations, setTokenDecorations] = useState<string[]>([]);
   const editorRef = useRef<MonacoEditor.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const setActiveWidget = useAppStore((s) => s.setActiveWidget);
@@ -58,6 +59,33 @@ export const WorkspaceSplit = ({ mode, flow, flowId, selectedMatch }: WorkspaceS
     setJsonDecorations(newDecos);
     editor.revealLineInCenter(startLine);
   }, [selectedMatch]);
+
+  // Monaco: decorate ${tse.vars.*} tokens lightly
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    if (!editor || !monaco) return;
+    const model = editor.getModel();
+    if (!model) return;
+    // clear previous
+    setTokenDecorations((prev) => editor.deltaDecorations(prev, []));
+
+    const pattern = String.raw`\$\{tse\.vars\.[^}]+\}`;
+    const matches = model.findMatches(pattern, false, true, true, null, true);
+    if (!matches || matches.length === 0) return;
+    const limited = matches.slice(0, 2000); // safety cap
+    const newDecos = editor.deltaDecorations(
+      [],
+      limited.map((m) => ({
+        range: m.range,
+        options: { className: "tw-token-highlight", isWholeLine: false, stickiness: 1 }
+      }))
+    );
+    setTokenDecorations(newDecos);
+    return () => {
+      setTokenDecorations((prev) => editor.deltaDecorations(prev, []));
+    };
+  }, [docJson]);
 
   // Git: detect repo and fetch HEAD for current file
   useEffect(() => {

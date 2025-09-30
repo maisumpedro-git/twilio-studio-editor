@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import clsx from "clsx";
 
 import { Button, IconButton } from "../ui/Button";
-import { DownloadIcon, RefreshIcon, SearchIcon, FolderIcon } from "../ui/icons";
+import { DownloadIcon, RefreshIcon, SearchIcon, FolderIcon, ChevronRightIcon } from "../ui/icons";
 import type { SidebarMode } from "@shared/appManifest";
 
 export type PrimaryToolbarProps = {
@@ -18,6 +18,7 @@ export type PrimaryToolbarProps = {
   onValidateFlow: () => void;
   onPublishFlow: () => void;
   onChooseWorkspace?: () => void;
+  onToggleSidebarCollapsed?: () => void;
 };
 
 export const PrimaryToolbar = ({
@@ -31,8 +32,9 @@ export const PrimaryToolbar = ({
   onDownloadFlows,
   onSaveFlow,
   onValidateFlow,
-  onPublishFlow
-  , onChooseWorkspace
+  onPublishFlow,
+  onChooseWorkspace,
+  onToggleSidebarCollapsed
 }: PrimaryToolbarProps) => {
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/70 px-4 backdrop-blur">
@@ -46,6 +48,14 @@ export const PrimaryToolbar = ({
           </span>
         </div>
         <div className="hidden items-center gap-2 lg:flex">
+          <IconButton
+            variant="ghost"
+            icon={<ChevronRightIcon style={{ transform: "rotate(180deg)" }} />}
+            onClick={onToggleSidebarCollapsed}
+            title="Reduzir/expandir Sidebar"
+          >
+            Sidebar
+          </IconButton>
           <IconButton
             variant="ghost"
             icon={<SearchIcon />}

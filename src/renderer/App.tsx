@@ -96,7 +96,7 @@ const App = () => {
     }, 250);
 
     return () => window.clearTimeout(handle);
-  }, [sidebarMode, searchTerm, performSearch, setSearchResults]);
+  }, [sidebarMode, searchTerm, selectedSearchFlowIds, performSearch, setSearchResults]);
 
   const handleSelectFlow = (filePath: string) => {
     void openFlow(filePath);
@@ -132,6 +132,13 @@ const App = () => {
     if (!isFinite(n)) return 288;
     return Math.max(220, Math.min(600, n));
   }); // default 72 * 4px
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sidebarCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -217,10 +224,17 @@ const App = () => {
         onValidateFlow={validateActiveFlow}
         onPublishFlow={publishActiveFlow}
         onChooseWorkspace={handleChooseWorkspace}
+        onToggleSidebarCollapsed={() => {
+          setSidebarCollapsed((prev) => {
+            const next = !prev;
+            try { localStorage.setItem("sidebarCollapsed", next ? "1" : "0"); } catch {}
+            return next;
+          });
+        }}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <div style={{ width: sidebarWidth }} className="h-full shrink-0">
+        <div style={{ width: sidebarCollapsed ? 0 : sidebarWidth }} className="h-full shrink-0 transition-[width] duration-150">
           <SidebarExplorer
           mode={sidebarMode}
           flows={flows}
@@ -240,6 +254,7 @@ const App = () => {
           onClearSelectedSearchFlows={clearSelectedSearchFlows}
           />
         </div>
+        {!sidebarCollapsed ? (
         <div
           role="separator"
           aria-orientation="vertical"
@@ -252,7 +267,7 @@ const App = () => {
             document.body.style.userSelect = "none";
           }}
           className="h-full w-1 cursor-col-resize bg-slate-800/70 hover:bg-slate-700/80"
-        />
+        />) : null}
 
         <main className="relative flex flex-1 overflow-hidden flex-col">
           <TabsBar
