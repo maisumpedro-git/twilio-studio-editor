@@ -15,7 +15,7 @@ import { searchInFlows } from "./searchService";
 import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./cliService";
 import { getHeadFileContent, isGitRepo } from "./gitService";
 import { listEnvFiles, setActiveEnv, ensureMigrationTemplate } from "./workspaceService";
-import { generateMappings, readCurrentMapping, flattenMapping } from "./mappingService";
+import { generateMappings, readCurrentMapping, flattenMapping, upsertMapping } from "./mappingService";
 import type { FlowSummary, FlowFile, TwilioFlowDefinition } from "../shared";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -183,6 +183,10 @@ const registerIpcHandlers = () => {
   registerHandler<unknown, Awaited<ReturnType<typeof flattenMapping>>>(
     "twilio:get-mapping-flat",
     async () => flattenMapping(readCurrentMapping())
+  );
+  registerHandler<{ entries: Record<string, string> }, Awaited<ReturnType<typeof upsertMapping>>>(
+    "twilio:upsert-mapping",
+    async (_e, payload) => upsertMapping(payload.entries)
   );
 
   // Git integration

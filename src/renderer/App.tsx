@@ -6,6 +6,8 @@ import type { FlowSearchMatch } from "@shared/types";
 import { useAppStore, selectActiveFlow } from "./modules/state/appStore";
 import { VariablesPanel } from "./components/workspace/VariablesPanel";
 import { PublishReviewModal } from "./components/workspace/PublishReviewModal";
+import { ToolsMenuBar } from "./components/chrome/ToolsMenuBar";
+import { MappingCreateModal } from "./components/workspace/MappingCreateModal";
 import { PrimaryToolbar } from "./components/chrome/PrimaryToolbar";
 import { SidebarExplorer } from "./components/sidebar/SidebarExplorer";
 import { WorkspaceSplit } from "./components/workspace/WorkspaceSplit";
@@ -41,6 +43,9 @@ const App = () => {
   const ui = useAppStore((s) => s.ui);
   const openPublishReview = useAppStore((s) => s.openPublishReview);
   const confirmPublishWithValues = useAppStore((s) => s.confirmPublishWithValues);
+  const openMappingCreate = useAppStore((s) => s.openMappingCreate);
+  const closeMappingCreate = useAppStore((s) => s.closeMappingCreate);
+  const confirmMappingCreate = useAppStore((s) => s.confirmMappingCreate);
   const setSidebarMode = useAppStore((state) => state.setSidebarMode);
   const setSearchTerm = useAppStore((state) => state.setSearchTerm);
   const setSearchResults = useAppStore((state) => state.setSearchResults);
@@ -211,6 +216,9 @@ const App = () => {
 
   return (
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100">
+      {/* Top menu */}
+      <ToolsMenuBar onMappingCreate={() => void openMappingCreate()} />
+
       <PrimaryToolbar
         appName={APP_NAME}
         appVersion={version}
@@ -322,6 +330,15 @@ const App = () => {
         onCancel={() => useAppStore.setState((s) => ({ ui: { ...s.ui, publishReview: { ...s.ui.publishReview, open: false } } }))}
   onConfirm={(values: Record<string, string>) => void confirmPublishWithValues(values)}
         onRegenerateMapping={() => void window.twilioStudio.generateMappings().then(() => openPublishReview())}
+      />
+
+      {/* Mapping create modal */}
+      <MappingCreateModal
+        open={ui.mappingCreate.open}
+        values={ui.mappingCreate.values}
+        prefill={ui.mappingCreate.prefill}
+        onCancel={() => closeMappingCreate()}
+        onConfirm={(entries, apply) => void confirmMappingCreate(entries, apply)}
       />
 
       {toast ? (

@@ -182,6 +182,7 @@ export const SidebarExplorer = ({
                   className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800"
                   onClick={() => {
                     const open = !ui.rightPanel.open; // reuse flag to show/hide within sidebar
+                    try { localStorage.setItem("varsPanelOpen", open ? "1" : "0"); } catch {}
                     setUi((s) => ({ ui: { ...s.ui, rightPanel: { ...s.ui.rightPanel, open } } }));
                   }}
                 >

@@ -30,6 +30,7 @@ export type TwilioStudioAPI = {
   generateMappings: () => Promise<{ path: string; products: string[] }>;
   getMapping: () => Promise<Record<string, Record<string, string>>>;
   getMappingFlat: () => Promise<Record<string, string>>;
+  upsertMapping: (entries: Record<string, string>) => Promise<{ path: string; added: number; updated: number }>;
 };
 const api: TwilioStudioAPI = {
   getAppVersion: () => ipcRenderer.sendSync("app/version"),
@@ -53,7 +54,8 @@ const api: TwilioStudioAPI = {
   ensureMigrationTemplate: () => ipcRenderer.invoke("workspace:ensure-migration-template"),
   generateMappings: () => ipcRenderer.invoke("twilio:generate-mappings"),
   getMapping: () => ipcRenderer.invoke("twilio:get-mapping"),
-  getMappingFlat: () => ipcRenderer.invoke("twilio:get-mapping-flat")
+  getMappingFlat: () => ipcRenderer.invoke("twilio:get-mapping-flat"),
+  upsertMapping: (entries) => ipcRenderer.invoke("twilio:upsert-mapping", { entries })
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);

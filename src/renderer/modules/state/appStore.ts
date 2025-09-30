@@ -12,6 +12,7 @@ import type {
 } from "@shared/index";
 import { APPLICATION_STATE_BLUEPRINT } from "@shared/appManifest";
 import { collectFlowTokens, substituteTokens } from "@shared/tokenUtils";
+import { collectStringValuesWithPath, isInterestingValue, suggestVarName, replaceValuesWithTokens } from "../../utils/valueExtraction";
 
 export type FlowDocument = {
   file: FlowFile;
@@ -56,6 +57,9 @@ type AppState = {
   publishActiveFlow: () => Promise<void>;
   openPublishReview: () => Promise<void>;
   confirmPublishWithValues: (values: Record<string, string>) => Promise<void>;
+  openMappingCreate: () => Promise<void>;
+  closeMappingCreate: () => void;
+  confirmMappingCreate: (entries: Record<string, string>, applyToDoc: boolean) => Promise<void>;
   setActiveFlow: (flowId: string) => void;
   updateDocumentJson: (flowId: string, json: string) => void;
   markSaved: (flowId: string, file: FlowFile) => void;
@@ -84,6 +88,12 @@ type AppState = {
       open: boolean;
       tab: "variables" | "info";
       flowTokens: string[];
+    };
+    mappingCreate: {
+      open: boolean;
+      values: string[]; // values to map
+      prefill: Record<string, string>; // value -> suggested var name
+      existingFlat: Record<string, string>;
     };
   };
 };
@@ -128,7 +138,8 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   selectedSearchMatch: undefined,
   ui: {
     publishReview: { open: false, tokens: [], mapping: {}, empties: [] },
-    rightPanel: { open: false, tab: "variables", flowTokens: [] }
+    rightPanel: { open: (() => { try { return localStorage.getItem("varsPanelOpen") === "1"; } catch { return true; } })(), tab: "variables", flowTokens: [] }
+  , mappingCreate: { open: false, values: [], prefill: {}, existingFlat: {} }
   },
 
   initialize: async () => {
@@ -384,6 +395,65 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
         message: error instanceof Error ? error.message : "Erro ao publicar fluxo.",
         timestamp: Date.now()
       });
+    }
+  },
+
+  openMappingCreate: async () => {
+    const api = ensureApi();
+    const document = selectActiveDocument(get());
+    if (!document) {
+      get().pushToast({ intent: "info", message: "Abra um fluxo para criar variáveis.", timestamp: Date.now() });
+      return;
+    }
+    try {
+      const flow = parseJson(document.json);
+      const existingFlat = await api.getMappingFlat().catch(() => ({} as Record<string, string>));
+      // Collect string values from definition
+      const candidates = collectStringValuesWithPath(flow.definition)
+        .map((c) => c.value)
+        .filter((v, idx, arr) => arr.indexOf(v) === idx) // unique
+        .filter(isInterestingValue)
+        .filter((v) => !Object.values(existingFlat).includes(v)); // skip values already mapped
+      const prefill: Record<string, string> = {};
+      for (const v of candidates) prefill[v] = suggestVarName(v);
+      set((state: AppState) => ({ ui: { ...state.ui, mappingCreate: { open: true, values: candidates, prefill, existingFlat } } }));
+    } catch (e) {
+      get().pushToast({ intent: "error", message: "Falha ao extrair valores do fluxo.", timestamp: Date.now() });
+    }
+  },
+
+  closeMappingCreate: () => set((state: AppState) => ({ ui: { ...state.ui, mappingCreate: { ...state.ui.mappingCreate, open: false } } })),
+
+  confirmMappingCreate: async (entries: Record<string, string>, applyToDoc: boolean) => {
+    const api = ensureApi();
+    const document = selectActiveDocument(get());
+    if (!document) return;
+    try {
+      // entries: value -> varName
+      // Build varName -> value map for upsert
+      const upsert: Record<string, string> = {};
+      for (const [value, name] of Object.entries(entries)) {
+        if (!name || !name.trim()) continue;
+        upsert[name.trim()] = value;
+      }
+      if (Object.keys(upsert).length === 0) {
+        set((state: AppState) => ({ ui: { ...state.ui, mappingCreate: { ...state.ui.mappingCreate, open: false } } }));
+        return;
+      }
+      await api.upsertMapping(upsert);
+      // Optionally apply to local document and save
+      if (applyToDoc) {
+        const flow = parseJson(document.json);
+        const replacedDef = replaceValuesWithTokens(flow.definition, entries);
+        const toSave = { ...flow, definition: replacedDef };
+        const saved = await api.saveFlow(document.file.filePath, toSave);
+        get().markSaved(saved.id, saved);
+      }
+      set((state: AppState) => ({ ui: { ...state.ui, mappingCreate: { ...state.ui.mappingCreate, open: false } } }));
+      get().pushToast({ intent: "success", message: "Mapping atualizado.", timestamp: Date.now() });
+    } catch (e) {
+      console.error(e);
+      get().pushToast({ intent: "error", message: "Falha ao atualizar mapping.", timestamp: Date.now() });
     }
   },
 
