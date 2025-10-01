@@ -4,12 +4,11 @@ import { APP_NAME } from "@shared/index";
 import type { FlowSearchMatch } from "@shared/types";
 
 import { useAppStore, selectActiveFlow } from "./modules/state/appStore";
-import { VariablesPanel } from "./components/workspace/VariablesPanel";
 import { PublishReviewModal } from "./components/workspace/PublishReviewModal";
 import { ToolsMenuBar } from "./components/chrome/ToolsMenuBar";
 import { MappingCreateModal } from "./components/workspace/MappingCreateModal";
 import { ExtractionPatternModal, type ExtractionPatterns } from "./components/workspace/ExtractionPatternModal";
-import { collectStringValuesWithPath, isInterestingValue, suggestVarName } from "./utils/valueExtraction";
+import { suggestVarName } from "./utils/valueExtraction";
 import { PrimaryToolbar } from "./components/chrome/PrimaryToolbar";
 import { SidebarExplorer } from "./components/sidebar/SidebarExplorer";
 import { WorkspaceSplit } from "./components/workspace/WorkspaceSplit";
@@ -18,6 +17,7 @@ import { InitialPrompt } from "./components/workspace/InitialPrompt";
 import { StatusBar } from "./components/chrome/StatusBar";
 import { Toast } from "./components/ui/Toast";
 import { useHotkeys } from "./hooks/useHotkeys";
+import { c } from "vite/dist/node/types.d-aGj9QkWt";
 
 const App = () => {
   const [version, setVersion] = useState<string>("");
@@ -305,13 +305,6 @@ const App = () => {
               selectedMatch={selectedSearchMatch}
             />
           )}
-          {/* Right side expandable panel */}
-          <VariablesPanel
-            isOpen={ui.rightPanel.open}
-            flow={activeFlow?.flow}
-            onClose={() => useAppStore.setState((s) => ({ ui: { ...s.ui, rightPanel: { ...s.ui.rightPanel, open: false } } }))}
-            onOpenChange={(open: boolean) => useAppStore.setState((s) => ({ ui: { ...s.ui, rightPanel: { ...s.ui.rightPanel, open } } }))}
-          />
         </main>
       </div>
 
@@ -331,8 +324,7 @@ const App = () => {
         mapping={ui.publishReview.mapping}
         empties={ui.publishReview.empties}
         onCancel={() => useAppStore.setState((s) => ({ ui: { ...s.ui, publishReview: { ...s.ui.publishReview, open: false } } }))}
-  onConfirm={(values: Record<string, string>) => void confirmPublishWithValues(values)}
-        onRegenerateMapping={() => void window.twilioStudio.generateMappings().then(() => openPublishReview())}
+        onConfirm={(values: Record<string, string>) => void confirmPublishWithValues(values)}
       />
 
       {/* Extraction patterns modal */}
@@ -350,15 +342,33 @@ const App = () => {
           }
           const flow = JSON.parse(doc.json);
           const existingFlat = await window.twilioStudio.getMappingFlat().catch(() => ({} as Record<string, string>));
-          const all = collectStringValuesWithPath(flow.definition);
-          const keysLower = new Set((patterns.keyIncludes || []).map((k) => k.toLowerCase()));
-          const extraRegexes = (patterns.regexes || []).map((r) => { try { return new RegExp(r, "i"); } catch { return null; } }).filter(Boolean) as RegExp[];
-          const filtered = all.filter((c) => {
-            const keyOk = c.key ? Array.from(keysLower).some((kw) => c.key!.toLowerCase().includes(kw)) : false;
-            const regexOk = extraRegexes.some((re) => re.test(c.value));
-            return keyOk || regexOk || isInterestingValue(c.value);
-          });
-          const uniqueValues: string[] = Array.from(new Set(filtered.map((c) => c.value))).filter((v) => !Object.values(existingFlat).includes(v));
+          const json = JSON.stringify(flow);
+          const defaults: RegExp[] = [
+            /(AC|WS|WW|ZE|ZH|ZS|HX|TC|FW)[A-Za-z0-9]{32}/g, // Twilio SIDs
+            /https?:\/\/[^\s"']+/gi, // URLs
+          ];
+          const userRegexes = (patterns.regexes || [])
+            .map((r) => { try { return new RegExp(r, "gi"); } catch { return null; } })
+            .filter(Boolean) as RegExp[];
+          const regexes = [...defaults, ...userRegexes];
+          const candidates: string[] = [];
+          for (const re of regexes) {
+            re.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(json)) !== null) {
+              let value = m[0];
+              // If it's a URL, use hostname only
+              if (/^https?:\/\//i.test(value)) {
+                try {
+                  const u = new URL(value);
+                  console.log("URL origin:", u.origin);
+                  value = u.origin;
+                } catch {}
+              }
+              candidates.push(value);
+            }
+          }
+          const uniqueValues: string[] = Array.from(new Set(candidates)).filter((v) => !Object.values(existingFlat).includes(v));
           const prefill: Record<string, string> = {};
           for (const v of uniqueValues) prefill[v] = suggestVarName(v);
           useAppStore.setState((s) => ({ ui: { ...s.ui, mappingCreate: { open: true, values: uniqueValues, prefill, existingFlat } } }));

@@ -21,8 +21,8 @@ export const ExtractionPatternModal = ({
 
   useEffect(() => {
     if (!open) return;
-    setKeyIncludes((initial?.keyIncludes || ["workflow", "service", "sid", "url", "number"]).join(", "));
-    setRegexes((initial?.regexes || ["AC[\\w]{32}", "WK[\\w]{32}", "https?:\\/\\/[^\\s\"]+", "\\+\\d{10,15}"]).join(", "));
+    setKeyIncludes((initial?.keyIncludes || []).join(", "));
+    setRegexes((initial?.regexes || []).join(", "));
   }, [open]);
 
   if (!open) return null;
@@ -41,7 +41,7 @@ export const ExtractionPatternModal = ({
               className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 outline-none focus:border-slate-600"
               value={keyIncludes}
               onChange={(e) => setKeyIncludes(e.target.value)}
-              placeholder="workflow, service, sid, url, number"
+              placeholder="TwilioSid"
             />
           </label>
           <label className="block">
@@ -50,7 +50,7 @@ export const ExtractionPatternModal = ({
               className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 outline-none focus:border-slate-600"
               value={regexes}
               onChange={(e) => setRegexes(e.target.value)}
-              placeholder={'AC[\\w]{32}, https?:\\/\\/[^\\s"]+, \\+\\d{10,15}'}
+              placeholder={'AC[\\w]{32}'}
             />
           </label>
           <div className="flex items-center justify-end gap-2">

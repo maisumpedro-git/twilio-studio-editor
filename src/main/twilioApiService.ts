@@ -40,12 +40,7 @@ const transformFlow = (api: any): TwilioFlowDefinition => {
   return {
     sid: api.sid,
     friendlyName: api.friendly_name ?? api.friendlyName ?? "",
-    status: api.status,
     definition,
-    commit_message: api.commit_message ?? api.commitMessage,
-    valid: api.valid,
-    date_created: api.date_created ?? api.dateCreated,
-    date_updated: api.date_updated ?? api.dateUpdated
   } as TwilioFlowDefinition;
 };
 
@@ -87,11 +82,10 @@ export const validateFlowViaApi = async (flow: TwilioFlowDefinition): Promise<Va
       if (!flow.sid) throw new Error("Flow SID required for validation fallback");
       const form = new URLSearchParams();
       form.set("Definition", JSON.stringify(flow.definition));
+      form.set("Status", "published");
       if (flow.friendlyName) form.set("FriendlyName", flow.friendlyName);
-      if (flow.status) form.set("Status", flow.status);
-      const res = await studio.post(`/Flows/${encodeURIComponent(flow.sid)}`, form, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        params: { ValidationOnly: true }
+      const res = await studio.post(`/Flows/Validate`, form, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }
       });
       return { success: true, stdout: JSON.stringify(res.data), stderr: "", exitCode: 0 };
     } catch (e2) {
@@ -107,8 +101,8 @@ export const updateFlow = async (flow: TwilioFlowDefinition): Promise<Validation
     const form = new URLSearchParams();
     form.set("Definition", JSON.stringify(flow.definition));
     if (flow.friendlyName) form.set("FriendlyName", flow.friendlyName);
-    if (flow.status) form.set("Status", flow.status);
-    if (flow.commit_message) form.set("CommitMessage", flow.commit_message);
+    form.set("CommitMessage", "Atualização via Twilio Studio Editor");
+    form.set("Status", "published");
     const res = await studio.post(`/Flows/${encodeURIComponent(flow.sid)}`, form, { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
     return { success: true, stdout: JSON.stringify(res.data), stderr: "", exitCode: 0 };
   } catch (error) {

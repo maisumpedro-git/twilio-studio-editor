@@ -7,7 +7,6 @@ export const PublishReviewModal = ({
   empties,
   onCancel,
   onConfirm,
-  onRegenerateMapping
 }: {
   open: boolean;
   tokens: string[];
@@ -15,7 +14,6 @@ export const PublishReviewModal = ({
   empties: string[];
   onCancel: () => void;
   onConfirm: (values: Record<string, string>) => void;
-  onRegenerateMapping: () => void;
 }) => {
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
@@ -67,12 +65,6 @@ export const PublishReviewModal = ({
             Vazias: <span className={unresolved.length ? "text-yellow-300" : "text-slate-300"}>{unresolved.length}</span>
           </div>
           <div className="flex gap-2">
-            <button
-              className="rounded border border-slate-800 px-3 py-1 text-slate-200 hover:bg-slate-800"
-              onClick={onRegenerateMapping}
-            >
-              Regerar mapping
-            </button>
             <button
               className="rounded border border-slate-800 px-3 py-1 text-slate-200 hover:bg-slate-800"
               onClick={onCancel}

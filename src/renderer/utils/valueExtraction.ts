@@ -36,10 +36,8 @@ export const isInterestingValue = (s: string): boolean => {
   if (isTokenString(s)) return false;
   if (/^\s*$/.test(s)) return false;
   // Heuristics: SIDs, URLs, phone numbers, or strings with at least 4 visible chars
-  if (/^(AC|WK|WS|MG|VA)[A-Za-z0-9]{32}$/.test(s)) return true;
+  if (/^(AC|WK|WS|MG|VA|WW|TC|FW|ZE|ZH|ZS|HX)[A-Za-z0-9]{32}$/.test(s)) return true;
   if (/^https?:\/\//.test(s)) return true;
-  if (/^\+\d{10,15}$/.test(s)) return true;
-  if (s.replace(/\s+/g, "").length >= 4) return true;
   return false;
 };
 
@@ -50,8 +48,25 @@ export const replaceValuesWithTokens = (obj: any, valueToVarName: Record<string,
     for (const k of Object.keys(obj)) out[k] = replaceValuesWithTokens((obj as any)[k], valueToVarName);
     return out;
   }
-  if (typeof obj === "string" && valueToVarName[obj]) {
-    return `\${tse.vars.${valueToVarName[obj]}}`.replace(/^\\/, "$"); // ensure proper ${}
+  if (typeof obj === "string") {
+    // Exact value replacement first
+    if (valueToVarName[obj]) {
+      return `\${tse.vars.${valueToVarName[obj]}}`.replace(/^\\/, "$");
+    }
+    // If the string looks like a URL, attempt hostname-only substitution
+    if (/^https?:\/\//i.test(obj)) {
+      try {
+        const u = new URL(obj);
+        const host = u.hostname;
+        if (valueToVarName[host]) {
+          const token = `\${tse.vars.${valueToVarName[host]}}`.replace(/^\\/, "$");
+          // rebuild URL with token as hostname, preserving protocol, port, path, query, hash
+          const port = u.port ? `:${u.port}` : "";
+          const rebuilt = `${u.protocol}//${token}${port}${u.pathname}${u.search}${u.hash}`;
+          return rebuilt;
+        }
+      } catch {}
+    }
   }
   return obj;
 };
@@ -65,10 +80,7 @@ export const suggestVarName = (value: string): string => {
     } catch {}
     return "ExternalUrl";
   }
-  if (/^\+\d{10,15}$/.test(value)) return "PhoneNumber";
   if (/^[A-Z]{2}[A-Za-z0-9]{32}$/.test(value)) return "TwilioSid";
-  if (/^[0-9a-f]{32}$/i.test(value)) return "HashValue";
-  if (value.length < 32) return cap(value.replace(/[^a-zA-Z0-9]/g, " ").split(" ").slice(0, 4).map(cap).join(""));
   return "ValueVar";
 };
 

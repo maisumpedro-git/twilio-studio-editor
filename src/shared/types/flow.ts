@@ -13,16 +13,11 @@ export type TwilioWidget = {
 export type TwilioFlowDefinition = {
   sid?: string;
   friendlyName: string;
-  status?: string;
   definition: {
     description?: string;
     initial_state?: string;
     states: TwilioWidget[];
   };
-  commit_message?: string;
-  valid?: boolean;
-  date_created?: string;
-  date_updated?: string;
 };
 
 export type FlowFile = {

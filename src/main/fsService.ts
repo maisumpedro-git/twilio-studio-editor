@@ -15,12 +15,9 @@ const sanitizeName = (name: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 120) || "flow";
 
-export const buildFlowFileName = (friendlyName: string, sid?: string) => {
-  // Requirement: filename must be exactly the SID when available
-  if (sid && sid.trim().length > 0) {
-    return `${sid}${FLOW_FILE_EXTENSION}`;
-  }
-  // Fallback: sanitized friendly name, else a generic name
+export const buildFlowFileName = (friendlyName: string) => {
+
+  //Sanitized friendly name, else a generic name
   const base = sanitizeName(friendlyName || "flow");
   return `${base}${FLOW_FILE_EXTENSION}`;
 };

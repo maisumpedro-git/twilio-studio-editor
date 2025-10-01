@@ -1,29 +1,16 @@
 import type { FlowSummary, TwilioFlowDefinition } from "../shared";
 import { buildFlowFileName, resolveFlowPath, writeFlowFile, listFlowSummaries } from "./fsService";
 import { listFlows, fetchFlow, validateFlowViaApi, updateFlow } from "./twilioApiService";
-import { generateMappings } from "./mappingService";
-
-const parseJson = <T>(input: string): T | undefined => {
-  try {
-    return JSON.parse(input) as T;
-  } catch (error) {
-    console.error("Failed to parse JSON output", error);
-    return undefined;
-  }
-};
 
 export const downloadAllFlows = async () => {
   try {
-    // First, generate mapping file for the current env to aid migration workflows
-    try { await generateMappings(); } catch {}
-
     const flows = await listFlows();
     for (const f of flows) {
       if (!f.sid) continue;
       try {
         const detailed = await fetchFlow(f.sid);
         if (!detailed) continue;
-        const fileName = buildFlowFileName(detailed.friendlyName, detailed.sid);
+        const fileName = buildFlowFileName(detailed.friendlyName);
         const filePath = resolveFlowPath(fileName);
         await writeFlowFile(filePath, detailed);
       } catch (e) {
@@ -46,7 +33,7 @@ export const publishFlow = async (flow: TwilioFlowDefinition) => {
 };
 
 export const saveFlowLocally = async (flow: TwilioFlowDefinition) => {
-  const fileName = buildFlowFileName(flow.friendlyName, flow.sid);
+  const fileName = buildFlowFileName(flow.friendlyName);
   const filePath = resolveFlowPath(fileName);
   return writeFlowFile(filePath, flow);
 };
