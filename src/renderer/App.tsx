@@ -17,7 +17,6 @@ import { InitialPrompt } from "./components/workspace/InitialPrompt";
 import { StatusBar } from "./components/chrome/StatusBar";
 import { Toast } from "./components/ui/Toast";
 import { useHotkeys } from "./hooks/useHotkeys";
-import { c } from "vite/dist/node/types.d-aGj9QkWt";
 
 const App = () => {
   const [version, setVersion] = useState<string>("");
@@ -361,16 +360,23 @@ const App = () => {
               if (/^https?:\/\//i.test(value)) {
                 try {
                   const u = new URL(value);
-                  console.log("URL origin:", u.origin);
-                  value = u.origin;
+                  value = u.hostname; // use hostname only
                 } catch {}
               }
               candidates.push(value);
             }
           }
-          const uniqueValues: string[] = Array.from(new Set(candidates)).filter((v) => !Object.values(existingFlat).includes(v));
+          const uniqueValues: string[] = Array.from(new Set(candidates));
+          // Build value -> existing varName map from existingFlat (keys are tokens like ${tse.vars.Name})
+          const valueToExistingVar: Record<string, string> = {};
+          for (const [token, val] of Object.entries(existingFlat)) {
+            if (typeof val !== "string") continue;
+            const m = /^\$\{tse\.vars\.([^}]+)\}$/.exec(token);
+            const varName = m ? m[1] : token;
+            valueToExistingVar[val] = varName;
+          }
           const prefill: Record<string, string> = {};
-          for (const v of uniqueValues) prefill[v] = suggestVarName(v);
+          for (const v of uniqueValues) prefill[v] = valueToExistingVar[v] ?? suggestVarName(v);
           useAppStore.setState((s) => ({ ui: { ...s.ui, mappingCreate: { open: true, values: uniqueValues, prefill, existingFlat } } }));
         }}
       />
