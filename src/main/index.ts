@@ -16,6 +16,7 @@ import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./
 import { getHeadFileContent, isGitRepo } from "./gitService";
 import { listEnvFiles, setActiveEnv, ensureMigrationTemplate } from "./workspaceService";
 import { readCurrentMapping, flattenMapping, upsertMapping } from "./mappingService";
+import { fetchSidFriendlyMap, writeSidFriendlyMap, readSidFriendlyMap } from "./accountDataService";
 import type { FlowSummary, FlowFile, TwilioFlowDefinition } from "../shared";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -181,6 +182,11 @@ const registerIpcHandlers = () => {
     "twilio:upsert-mapping",
     async (_e, payload) => upsertMapping(payload.entries)
   );
+
+  // SID→friendly map helpers
+  registerHandler<unknown, Record<string, string>>("twilio:fetch-sid-friendly", async () => fetchSidFriendlyMap());
+  registerHandler<{ map: Record<string, string> }, { path: string }>("twilio:write-sid-friendly", async (_e, p) => ({ path: await writeSidFriendlyMap(p.map) }));
+  registerHandler<unknown, Record<string, string>>("twilio:read-sid-friendly", async () => readSidFriendlyMap());
 
   // Git integration
   registerHandler<unknown, boolean>("git:isRepo", async () => {

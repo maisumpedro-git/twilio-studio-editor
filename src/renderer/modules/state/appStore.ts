@@ -94,6 +94,7 @@ type AppState = {
       values: string[]; // values to map
       prefill: Record<string, string>; // value -> suggested var name
       existingFlat: Record<string, string>;
+      indicators: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }>;
     };
   };
 };
@@ -139,7 +140,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   ui: {
     publishReview: { open: false, tokens: [], mapping: {}, empties: [] },
     rightPanel: { open: (() => { try { return localStorage.getItem("varsPanelOpen") === "1"; } catch { return true; } })(), tab: "variables", flowTokens: [] }
-  , mappingCreate: { open: false, values: [], prefill: {}, existingFlat: {} }
+  , mappingCreate: { open: false, values: [], prefill: {}, existingFlat: {}, indicators: {} as Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }> }
   },
 
   initialize: async () => {
@@ -416,7 +417,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
         .filter((v) => !Object.values(existingFlat).includes(v)); // skip values already mapped
       const prefill: Record<string, string> = {};
       for (const v of candidates) prefill[v] = suggestVarName(v);
-      set((state: AppState) => ({ ui: { ...state.ui, mappingCreate: { open: true, values: candidates, prefill, existingFlat } } }));
+  set((state: AppState) => ({ ui: { ...state.ui, mappingCreate: { open: true, values: candidates, prefill, existingFlat, indicators: {} } } }));
     } catch (e) {
       get().pushToast({ intent: "error", message: "Falha ao extrair valores do fluxo.", timestamp: Date.now() });
     }

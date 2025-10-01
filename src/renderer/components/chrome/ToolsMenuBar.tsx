@@ -1,4 +1,4 @@
-export const ToolsMenuBar = ({ onMappingCreate }: { onMappingCreate: () => void | Promise<void> }) => {
+export const ToolsMenuBar = ({ onMappingCreate, onRefreshSidFriendly }: { onMappingCreate: () => void | Promise<void>; onRefreshSidFriendly?: () => void | Promise<void> }) => {
   return (
     <div className="flex h-8 items-center gap-4 border-b border-slate-900 bg-slate-950/80 px-3 text-xs text-slate-300">
       <div className="group relative">
@@ -9,6 +9,12 @@ export const ToolsMenuBar = ({ onMappingCreate }: { onMappingCreate: () => void 
             onClick={() => void onMappingCreate()}
           >
             Mapping Create (fluxo atual)
+          </button>
+          <button
+            className="block w-full px-3 py-1 text-left text-xs hover:bg-slate-800"
+            onClick={() => onRefreshSidFriendly && onRefreshSidFriendly()}
+          >
+            Atualizar nomes amigáveis (SIDs)
           </button>
         </div>
       </div>

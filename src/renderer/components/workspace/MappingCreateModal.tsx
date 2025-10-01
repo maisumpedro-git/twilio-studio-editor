@@ -4,12 +4,14 @@ export const MappingCreateModal = ({
   open,
   values,
   prefill,
+  indicators,
   onCancel,
   onConfirm
 }: {
   open: boolean;
   values: string[];
   prefill: Record<string, string>;
+  indicators?: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }>;
   onCancel: () => void;
   onConfirm: (entries: Record<string, string>, applyToDoc: boolean) => void | Promise<void>;
 }) => {
@@ -43,6 +45,7 @@ export const MappingCreateModal = ({
             <thead className="sticky top-0 bg-slate-900 text-slate-400">
               <tr>
                 <th className="px-2 py-2">Valor</th>
+                <th className="px-2 py-2">Origem</th>
                 <th className="px-2 py-2 w-60">Nome da variável</th>
               </tr>
             </thead>
@@ -50,6 +53,15 @@ export const MappingCreateModal = ({
               {values.map((v) => (
                 <tr key={v} className="border-t border-slate-800">
                   <td className="max-w-[520px] truncate px-2 py-2 text-slate-200" title={v}>{v}</td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    {indicators?.[v]?.existing ? (
+                      <span className="mr-2 rounded bg-sky-800/30 px-2 py-0.5 text-[10px] text-sky-200">existente</span>
+                    ) : null}
+                    {indicators?.[v]?.friendly ? (
+                      <span title={indicators?.[v]?.friendlyName}
+                        className="rounded bg-emerald-800/30 px-2 py-0.5 text-[10px] text-emerald-200">friendly</span>
+                    ) : null}
+                  </td>
                   <td className="px-2 py-2">
                     <input
                       className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-slate-600"

@@ -219,7 +219,18 @@ const App = () => {
   return (
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100">
       {/* Top menu */}
-      <ToolsMenuBar onMappingCreate={() => { setShowPatternModal(true); }} />
+      <ToolsMenuBar
+        onMappingCreate={() => { setShowPatternModal(true); }}
+        onRefreshSidFriendly={async () => {
+          try {
+            const map = await window.twilioStudio.fetchSidFriendly();
+            await window.twilioStudio.writeSidFriendly(map);
+            pushToast({ intent: "success", message: "Mapa de friendly names atualizado.", timestamp: Date.now() });
+          } catch (e) {
+            pushToast({ intent: "error", message: (e as Error).message || "Falha ao atualizar mapa.", timestamp: Date.now() });
+          }
+        }}
+      />
 
       <PrimaryToolbar
         appName={APP_NAME}
@@ -360,7 +371,7 @@ const App = () => {
               if (/^https?:\/\//i.test(value)) {
                 try {
                   const u = new URL(value);
-                  value = u.hostname; // use hostname only
+                  value = u.hostname.replace('.twil.io', ''); // use hostname only
                 } catch {}
               }
               candidates.push(value);
@@ -375,9 +386,31 @@ const App = () => {
             const varName = m ? m[1] : token;
             valueToExistingVar[val] = varName;
           }
+          // Read SID→friendly map (single account)
+          const sidFriendly = await window.twilioStudio.readSidFriendly().catch(() => ({} as Record<string, string>));
+          // Friendly-name based suggestion helper
+          const suggestFromFriendly = (name: string): string => {
+            const base = name.replace(/[^A-Za-z0-9]+/g, " ").split(" ").filter(Boolean).map((s) => s[0].toUpperCase() + s.slice(1)).join("");
+            // Append suffix to avoid collisions and clarify SID nature when looks like SID
+            return base ? `${base}` : "ValueVar";
+          };
           const prefill: Record<string, string> = {};
-          for (const v of uniqueValues) prefill[v] = valueToExistingVar[v] ?? suggestVarName(v);
-          useAppStore.setState((s) => ({ ui: { ...s.ui, mappingCreate: { open: true, values: uniqueValues, prefill, existingFlat } } }));
+          const indicators: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }> = {};
+          for (const v of uniqueValues) {
+            if (valueToExistingVar[v]) {
+              prefill[v] = valueToExistingVar[v];
+              indicators[v] = { ...(indicators[v] || {}), existing: true };
+              continue;
+            }
+            // If v is a SID known in sidFriendly, use friendly-name
+            if (/^[A-Z]{2}[A-Za-z0-9]{32}$/.test(v) && sidFriendly[v]) {
+              prefill[v] = suggestFromFriendly(sidFriendly[v]);
+              indicators[v] = { ...(indicators[v] || {}), friendly: true, friendlyName: sidFriendly[v] };
+            } else {
+              prefill[v] = suggestVarName(v);
+            }
+          }
+          useAppStore.setState((s) => ({ ui: { ...s.ui, mappingCreate: { open: true, values: uniqueValues, prefill, existingFlat, indicators } } }));
         }}
       />
 
@@ -386,6 +419,7 @@ const App = () => {
         open={ui.mappingCreate.open}
         values={ui.mappingCreate.values}
         prefill={ui.mappingCreate.prefill}
+        indicators={ui.mappingCreate.indicators as any}
         onCancel={() => closeMappingCreate()}
         onConfirm={(entries, apply) => void confirmMappingCreate(entries, apply)}
       />

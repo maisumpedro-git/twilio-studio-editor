@@ -30,6 +30,9 @@ export type TwilioStudioAPI = {
   getMapping: () => Promise<Record<string, Record<string, string>>>;
   getMappingFlat: () => Promise<Record<string, string>>;
   upsertMapping: (entries: Record<string, string>) => Promise<{ path: string; added: number; updated: number }>;
+  fetchSidFriendly: () => Promise<Record<string, string>>;
+  readSidFriendly: () => Promise<Record<string, string>>;
+  writeSidFriendly: (map: Record<string, string>) => Promise<{ path: string }>;
 };
 const api: TwilioStudioAPI = {
   getAppVersion: () => ipcRenderer.sendSync("app/version"),
@@ -53,7 +56,10 @@ const api: TwilioStudioAPI = {
   ensureMigrationTemplate: () => ipcRenderer.invoke("workspace:ensure-migration-template"),
   getMapping: () => ipcRenderer.invoke("twilio:get-mapping"),
   getMappingFlat: () => ipcRenderer.invoke("twilio:get-mapping-flat"),
-  upsertMapping: (entries) => ipcRenderer.invoke("twilio:upsert-mapping", { entries })
+  upsertMapping: (entries) => ipcRenderer.invoke("twilio:upsert-mapping", { entries }),
+  fetchSidFriendly: () => ipcRenderer.invoke("twilio:fetch-sid-friendly"),
+  readSidFriendly: () => ipcRenderer.invoke("twilio:read-sid-friendly"),
+  writeSidFriendly: (map) => ipcRenderer.invoke("twilio:write-sid-friendly", { map })
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);
