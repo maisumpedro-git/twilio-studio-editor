@@ -1,9 +1,10 @@
 import { CheckIcon, RefreshIcon, SearchIcon } from "../ui/icons";
+import type { SidebarMode } from "@shared/appManifest";
 
 export type StatusBarProps = {
   isFetching: boolean;
   flowsCount: number;
-  sidebarMode: "explorer" | "global-search";
+  sidebarMode: SidebarMode;
   searchTerm: string;
   isSearching: boolean;
   searchResultsCount: number;
@@ -38,7 +39,9 @@ export const StatusBar = ({
               : searchTerm
                 ? `Busca: ${searchTerm} (${searchResultsCount} resultados)`
                 : "Busca global"
-            : "Explorer"}
+            : sidebarMode === "flow-paths" 
+              ? "Flow Paths"
+              : "Explorer"}
         </span>
       </div>
     </footer>

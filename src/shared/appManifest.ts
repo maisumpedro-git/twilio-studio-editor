@@ -20,7 +20,7 @@ export const APPLICATION_DESIGN_GUIDELINES = [
 ] as const;
 
 export type EditorMode = "json";
-export type SidebarMode = "explorer" | "global-search";
+export type SidebarMode = "explorer" | "global-search" | "flow-paths";
 
 export const APPLICATION_STATE_BLUEPRINT = {
   sidebarMode: "explorer" as SidebarMode,

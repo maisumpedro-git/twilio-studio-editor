@@ -2,10 +2,11 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 
 import type { FlowSummary, SidebarMode, FlowSearchMatch } from "@shared/index";
-import { SearchIcon, FlowIcon } from "../ui/icons";
+import { SearchIcon, FlowIcon, PathsIcon } from "../ui/icons";
 import { useAppStore } from "@renderer/modules/state/appStore";
 import { collectFlowTokens } from "@shared/tokenUtils";
 import { TreeView, buildTree } from "./TreeView";
+import { FlowPathsTab } from "./FlowPathsTab";
 
 export type SidebarExplorerProps = {
   mode: SidebarMode;
@@ -73,17 +74,53 @@ export const SidebarExplorer = ({
 
   return (
     <aside className="flex h-full w-full flex-col border-r border-slate-800 bg-slate-950/80">
-      <div className="flex items-center justify-between border-b border-slate-900 px-4 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {mode === "explorer" ? "Fluxos" : "Busca Global"}
-        </span>
+      <div className="flex items-center gap-2 border-b border-slate-900 px-2 py-2">
+        {/* Side tabs */}
         <button
           type="button"
-          onClick={onToggleMode}
-          className="text-xs text-slate-500 transition hover:text-slate-200"
+          title="Arquivos"
+          onClick={() => useAppStore.getState().setSidebarMode("explorer")}
+          className={clsx(
+            "flex items-center gap-2 rounded px-2 py-1 text-xs",
+            mode === "explorer" ? "bg-slate-800 text-slate-100" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+          )}
         >
-          {mode === "explorer" ? "Ctrl+Shift+F" : "Esc"}
+          <FlowIcon />
+          <span className="hidden sm:inline">Files</span>
         </button>
+        <button
+          type="button"
+          title="Busca Global"
+          onClick={() => useAppStore.getState().setSidebarMode("global-search")}
+          className={clsx(
+            "flex items-center gap-2 rounded px-2 py-1 text-xs",
+            mode === "global-search" ? "bg-slate-800 text-slate-100" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+          )}
+        >
+          <SearchIcon />
+          <span className="hidden sm:inline">Search</span>
+        </button>
+        <button
+          type="button"
+          title="Flow Paths"
+          onClick={() => useAppStore.getState().setSidebarMode("flow-paths")}
+          className={clsx(
+            "flex items-center gap-2 rounded px-2 py-1 text-xs",
+            mode === "flow-paths" ? "bg-slate-800 text-slate-100" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+          )}
+        >
+          <PathsIcon />
+          <span className="hidden sm:inline">FlowPaths</span>
+        </button>
+        <div className="ml-auto">
+          <button
+            type="button"
+            onClick={onToggleMode}
+            className="text-xs text-slate-500 transition hover:text-slate-200"
+          >
+            {mode === "global-search" ? "Esc" : "Ctrl+Shift+F"}
+          </button>
+        </div>
       </div>
 
       {mode === "global-search" ? (
@@ -198,7 +235,7 @@ export const SidebarExplorer = ({
 
             <WorkspaceSettingsBlock />
           </div>
-        ) : (
+        ) : mode === "global-search" ? (
           <div className="flex h-full flex-col gap-3 px-2 py-3">
             {searchTerm.trim().length === 0 && searchResults.length === 0 && !isSearching ? (
               <div className="rounded-md border border-dashed border-slate-800 bg-slate-950/40 px-4 py-6 text-center text-xs text-slate-500">
@@ -239,6 +276,8 @@ export const SidebarExplorer = ({
               ))}
             </ul>
           </div>
+        ) : (
+          <FlowPathsTab />
         )}
       </div>
     </aside>

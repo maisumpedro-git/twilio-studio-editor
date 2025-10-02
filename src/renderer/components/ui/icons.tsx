@@ -109,3 +109,12 @@ export const FolderIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
   </Icon>
 );
+
+export const PathsIcon = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <path d="M4 6h6a4 4 0 0 1 4 4v0a4 4 0 0 0 4 4h2" />
+    <circle cx={4} cy={6} r={2} />
+    <circle cx={20} cy={14} r={2} />
+    <circle cx={10} cy={6} r={0.01} />
+  </Icon>
+);
