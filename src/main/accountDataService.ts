@@ -3,6 +3,7 @@ import path from "path";
 import axios, { AxiosInstance } from "axios";
 import { getWorkspaceRoot } from "./constants";
 import { getTwilioConfig } from "./envService";
+import type { EnvVars } from "./envService";
 
 const ensureDir = (p: string) => fs.mkdirSync(p, { recursive: true });
 
@@ -22,8 +23,8 @@ const pickName = (it: any): string => it?.friendly_name || it?.unique_name || "e
 const pickChildName = (parent: any, it: any): string => `${pickName(parent)}_${pickName(it)}`;
 const arr = (v: any): any[] => (Array.isArray(v) ? v : []);
 
-export const fetchSidFriendlyMap = async (): Promise<Record<string, string>> => {
-  const cfg = getTwilioConfig();
+export const fetchSidFriendlyMap = async (overrideEnv?: EnvVars): Promise<Record<string, string>> => {
+  const cfg = getTwilioConfig(overrideEnv);
   if (!cfg.accountSid || !cfg.authToken) throw new Error("Credenciais ausentes no .env do workspace.");
   const auth = { username: cfg.accountSid, password: cfg.authToken };
   const taskrouter = client(`https://taskrouter.twilio.com/v1`, auth);

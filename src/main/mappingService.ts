@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { getWorkspaceRoot } from "./constants";
 import { getTwilioConfig } from "./envService";
+import { readSidFriendlyMap } from "./accountDataService";
 
 export type ProductMapping = Record<string, Record<string, string>>; // { product: { tokenKey: actualValue } }
 
@@ -69,4 +70,71 @@ export const upsertMapping = (entries: Record<string, string>): { path: string; 
   }
   fs.writeFileSync(abs, JSON.stringify(current, null, 2));
   return { path: abs, added, updated };
+};
+
+const SID_REGEX = /^[A-Z]{2}[A-Za-z0-9]{32}$/;
+
+const tryTransformValue = (
+  value: string,
+  devFriendly: Record<string, string>,
+  targetFriendly: Record<string, string>
+): string => {
+  // If it's a SID: map SID->friendly in dev, then friendly->SID in target
+  if (SID_REGEX.test(value)) {
+    const friendly = devFriendly[value];
+    if (friendly) {
+      const targetSid = Object.entries(targetFriendly).find(([, name]) => name === friendly)?.[0];
+      return targetSid || value;
+    }
+    return value;
+  }
+  // If it's a URL: attempt hostname replacement via friendly domain entry
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const u = new URL(value);
+      const hostLower = u.hostname.toLowerCase();
+      const friendly = devFriendly[hostLower]; // we store domain_base keys in lowercase
+      if (friendly) {
+        const targetDomain = Object.entries(targetFriendly).find(([, name]) => name === friendly)?.[0];
+        if (targetDomain) {
+          const rebuilt = `${u.protocol}//${targetDomain}${u.port ? ":" + u.port : ""}${u.pathname}${u.search}${u.hash}`;
+          return rebuilt;
+        }
+      }
+    } catch {}
+    return value;
+  }
+  return value;
+};
+
+export const generateMappingFromFriendly = async (
+  targetEnvName: string,
+  targetSidFriendly: Record<string, string>,
+  baseEnvName = "dev",
+  devSidFriendly?: Record<string, string>
+): Promise<{ path: string }> => {
+  const root = getWorkspaceRoot();
+  const scriptsDir = path.join(root, "scripts");
+  const baseFile = path.join(scriptsDir, buildMappingFileName(baseEnvName));
+  let base: ProductMapping = {};
+  try { base = JSON.parse(fs.readFileSync(baseFile, "utf-8")) as ProductMapping; } catch {}
+  const devFriendly = devSidFriendly || (await readSidFriendlyMap());
+
+  const out: ProductMapping = {};
+  for (const product of Object.keys(base)) {
+    const bag = base[product] || {};
+    const next: Record<string, string> = {};
+    for (const [key, value] of Object.entries(bag)) {
+      if (typeof value === "string") {
+        next[key] = tryTransformValue(value, devFriendly, targetSidFriendly);
+      } else {
+        next[key] = value as any;
+      }
+    }
+    out[product] = next;
+  }
+
+  const outFile = path.join(scriptsDir, buildMappingFileName(targetEnvName));
+  fs.writeFileSync(outFile, JSON.stringify(out, null, 2));
+  return { path: outFile };
 };

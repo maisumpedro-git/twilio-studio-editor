@@ -17,6 +17,7 @@ import { InitialPrompt } from "./components/workspace/InitialPrompt";
 import { StatusBar } from "./components/chrome/StatusBar";
 import { Toast } from "./components/ui/Toast";
 import { useHotkeys } from "./hooks/useHotkeys";
+import { SidFriendlyUpdateModal } from "./components/workspace/SidFriendlyUpdateModal";
 
 const App = () => {
   const [version, setVersion] = useState<string>("");
@@ -62,6 +63,7 @@ const App = () => {
   const toggleSelectedSearchFlowId = useAppStore((s) => s.toggleSelectedSearchFlowId);
   const selectAllSearchFlows = useAppStore((s) => s.selectAllSearchFlows);
   const clearSelectedSearchFlows = useAppStore((s) => s.clearSelectedSearchFlows);
+  const [showSidModal, setShowSidModal] = useState(false);
 
   useEffect(() => {
     setVersion(window.twilioStudio.getAppVersion());
@@ -219,18 +221,7 @@ const App = () => {
   return (
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100">
       {/* Top menu */}
-      <ToolsMenuBar
-        onMappingCreate={() => { setShowPatternModal(true); }}
-        onRefreshSidFriendly={async () => {
-          try {
-            const map = await window.twilioStudio.fetchSidFriendly();
-            await window.twilioStudio.writeSidFriendly(map);
-            pushToast({ intent: "success", message: "Mapa de friendly names atualizado.", timestamp: Date.now() });
-          } catch (e) {
-            pushToast({ intent: "error", message: (e as Error).message || "Falha ao atualizar mapa.", timestamp: Date.now() });
-          }
-        }}
-      />
+      <ToolsMenuBar onMappingCreate={() => { setShowPatternModal(true); }} onRefreshSidFriendly={() => setShowSidModal(true)} />
 
       <PrimaryToolbar
         appName={APP_NAME}
@@ -362,6 +353,7 @@ const App = () => {
             .filter(Boolean) as RegExp[];
           const regexes = [...defaults, ...userRegexes];
           const candidates: string[] = [];
+          const hostnameSet = new Set<string>();
           for (const re of regexes) {
             re.lastIndex = 0;
             let m: RegExpExecArray | null;
@@ -371,7 +363,9 @@ const App = () => {
               if (/^https?:\/\//i.test(value)) {
                 try {
                   const u = new URL(value);
-                  value = u.hostname.replace('.twil.io', ''); // use hostname only
+                  const host = u.hostname.replace('.twil.io', '');
+                  value = host; // use hostname only
+                  hostnameSet.add(host);
                 } catch {}
               }
               candidates.push(value);
@@ -395,7 +389,7 @@ const App = () => {
             return base ? `${base}` : "ValueVar";
           };
           const prefill: Record<string, string> = {};
-          const indicators: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }> = {};
+          const indicators: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string; hostname?: boolean }> = {};
           for (const v of uniqueValues) {
             if (valueToExistingVar[v]) {
               prefill[v] = valueToExistingVar[v];
@@ -407,7 +401,16 @@ const App = () => {
               prefill[v] = suggestFromFriendly(sidFriendly[v]);
               indicators[v] = { ...(indicators[v] || {}), friendly: true, friendlyName: sidFriendly[v] };
             } else {
-              prefill[v] = suggestVarName(v);
+              // If it's a hostname-only value and we have a friendly mapping for that hostname
+              if (hostnameSet.has(v) && sidFriendly[v]) {
+                prefill[v] = suggestFromFriendly(sidFriendly[v]);
+                indicators[v] = { ...(indicators[v] || {}), friendly: true, friendlyName: sidFriendly[v], hostname: true };
+              } else {
+                prefill[v] = suggestVarName(v);
+                if (hostnameSet.has(v)) {
+                  indicators[v] = { ...(indicators[v] || {}), hostname: true };
+                }
+              }
             }
           }
           useAppStore.setState((s) => ({ ui: { ...s.ui, mappingCreate: { open: true, values: uniqueValues, prefill, existingFlat, indicators } } }));
@@ -422,6 +425,26 @@ const App = () => {
         indicators={ui.mappingCreate.indicators as any}
         onCancel={() => closeMappingCreate()}
         onConfirm={(entries, apply) => void confirmMappingCreate(entries, apply)}
+      />
+
+      <SidFriendlyUpdateModal
+        open={showSidModal}
+        onCancel={() => setShowSidModal(false)}
+        onConfirm={async (accountSid: string, authToken: string, envName?: string) => {
+          try {
+            const sidFriendly = await window.twilioStudio.fetchSidFriendly(accountSid, authToken);
+            await window.twilioStudio.writeSidFriendly(sidFriendly);
+            if (envName && envName.trim()) {
+              await window.twilioStudio.generateMappingFromFriendly(envName.trim(), sidFriendly, "dev");
+              pushToast({ intent: "success", message: `Mapa de friendly names atualizado e mapping-${envName.trim()}.json gerado.`, timestamp: Date.now() });
+            } else {
+              pushToast({ intent: "success", message: "Mapa de friendly names atualizado.", timestamp: Date.now() });
+            }
+            setShowSidModal(false);
+          } catch (e) {
+            pushToast({ intent: "error", message: (e as Error).message || "Falha ao atualizar mapa/mapping.", timestamp: Date.now() });
+          }
+        }}
       />
 
       {toast ? (

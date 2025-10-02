@@ -30,9 +30,10 @@ export type TwilioStudioAPI = {
   getMapping: () => Promise<Record<string, Record<string, string>>>;
   getMappingFlat: () => Promise<Record<string, string>>;
   upsertMapping: (entries: Record<string, string>) => Promise<{ path: string; added: number; updated: number }>;
-  fetchSidFriendly: () => Promise<Record<string, string>>;
+  fetchSidFriendly: (accountSid?: string, authToken?: string) => Promise<Record<string, string>>;
   readSidFriendly: () => Promise<Record<string, string>>;
   writeSidFriendly: (map: Record<string, string>) => Promise<{ path: string }>;
+  generateMappingFromFriendly: (envName: string, sidFriendly: Record<string, string>, baseEnvName?: string) => Promise<{ path: string }>;
 };
 const api: TwilioStudioAPI = {
   getAppVersion: () => ipcRenderer.sendSync("app/version"),
@@ -57,9 +58,10 @@ const api: TwilioStudioAPI = {
   getMapping: () => ipcRenderer.invoke("twilio:get-mapping"),
   getMappingFlat: () => ipcRenderer.invoke("twilio:get-mapping-flat"),
   upsertMapping: (entries) => ipcRenderer.invoke("twilio:upsert-mapping", { entries }),
-  fetchSidFriendly: () => ipcRenderer.invoke("twilio:fetch-sid-friendly"),
+  fetchSidFriendly: (accountSid?: string, authToken?: string) => ipcRenderer.invoke("twilio:fetch-sid-friendly", { accountSid, authToken }),
   readSidFriendly: () => ipcRenderer.invoke("twilio:read-sid-friendly"),
-  writeSidFriendly: (map) => ipcRenderer.invoke("twilio:write-sid-friendly", { map })
+  writeSidFriendly: (map) => ipcRenderer.invoke("twilio:write-sid-friendly", { map }),
+  generateMappingFromFriendly: (envName, sidFriendly, baseEnvName) => ipcRenderer.invoke("twilio:generate-mapping-from-friendly", { envName, sidFriendly, baseEnvName })
 };
 
 contextBridge.exposeInMainWorld("twilioStudio", api);

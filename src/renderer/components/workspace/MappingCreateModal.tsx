@@ -11,7 +11,7 @@ export const MappingCreateModal = ({
   open: boolean;
   values: string[];
   prefill: Record<string, string>;
-  indicators?: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }>;
+  indicators?: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string; hostname?: boolean }>;
   onCancel: () => void;
   onConfirm: (entries: Record<string, string>, applyToDoc: boolean) => void | Promise<void>;
 }) => {
@@ -60,6 +60,9 @@ export const MappingCreateModal = ({
                     {indicators?.[v]?.friendly ? (
                       <span title={indicators?.[v]?.friendlyName}
                         className="rounded bg-emerald-800/30 px-2 py-0.5 text-[10px] text-emerald-200">friendly</span>
+                    ) : null}
+                    {indicators?.[v]?.hostname ? (
+                      <span className="ml-2 rounded bg-fuchsia-800/30 px-2 py-0.5 text-[10px] text-fuchsia-200">hostname</span>
                     ) : null}
                   </td>
                   <td className="px-2 py-2">

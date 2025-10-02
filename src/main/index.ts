@@ -15,7 +15,7 @@ import { searchInFlows } from "./searchService";
 import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./cliService";
 import { getHeadFileContent, isGitRepo } from "./gitService";
 import { listEnvFiles, setActiveEnv, ensureMigrationTemplate } from "./workspaceService";
-import { readCurrentMapping, flattenMapping, upsertMapping } from "./mappingService";
+import { readCurrentMapping, flattenMapping, upsertMapping, generateMappingFromFriendly } from "./mappingService";
 import { fetchSidFriendlyMap, writeSidFriendlyMap, readSidFriendlyMap } from "./accountDataService";
 import type { FlowSummary, FlowFile, TwilioFlowDefinition } from "../shared";
 
@@ -182,9 +182,13 @@ const registerIpcHandlers = () => {
     "twilio:upsert-mapping",
     async (_e, payload) => upsertMapping(payload.entries)
   );
+  registerHandler<{ envName: string; sidFriendly: Record<string, string>; baseEnvName?: string }, Awaited<ReturnType<typeof generateMappingFromFriendly>>>(
+    "twilio:generate-mapping-from-friendly",
+    async (_e, p) => generateMappingFromFriendly(p.envName, p.sidFriendly, p.baseEnvName || "dev")
+  );
 
   // SID→friendly map helpers
-  registerHandler<unknown, Record<string, string>>("twilio:fetch-sid-friendly", async () => fetchSidFriendlyMap());
+  registerHandler<{ accountSid?: string; authToken?: string }, Record<string, string>>("twilio:fetch-sid-friendly", async (_e, p) => fetchSidFriendlyMap({ TWILIO_ACCOUNT_SID: p.accountSid || "", TWILIO_AUTH_TOKEN: p.authToken || "" } as any));
   registerHandler<{ map: Record<string, string> }, { path: string }>("twilio:write-sid-friendly", async (_e, p) => ({ path: await writeSidFriendlyMap(p.map) }));
   registerHandler<unknown, Record<string, string>>("twilio:read-sid-friendly", async () => readSidFriendlyMap());
 

@@ -22,8 +22,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "build": "npm run clean && npm run build-shared && npm run build-main && npm run build-preload && npm run build-renderer",
     "package": "npm run build && electron-builder",
-    "test": "vitest",
-    "extract:friendly-mapping": "ts-node ./scripts/extractFriendlyMapping.ts"
+    "test": "vitest"
   },
   "build": {
     "appId": "com.twilio.studio.editor",
