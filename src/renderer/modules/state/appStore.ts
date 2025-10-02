@@ -270,7 +270,14 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
 
     try {
       const flow = parseJson(document.json);
-      const result = await api.validateFlow(flow);
+      let mapping: Record<string, string> = {};
+      try {
+        mapping = await api.getMappingFlat();
+      } catch {
+        mapping = {};
+      }
+      const newFlow = substituteTokens(flow, mapping);
+      const result = await api.validateFlow(newFlow);
       get().pushToast({
         intent: result.success ? "success" : "error",
         message: result.success ? "Fluxo válido." : result.stderr || "Falha na validação.",
@@ -375,9 +382,9 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
     if (!document) return;
     try {
       const flow = parseJson(document.json);
-      if (!flow.sid) throw new Error("Flow SID é obrigatório para publicar.");
-      const newDef = substituteTokens(flow.definition, values);
-      const toPublish = { ...flow, definition: newDef };
+      const newFlow = substituteTokens(flow, values);
+      if (!newFlow.sid) throw new Error("Flow SID é obrigatório para publicar.");
+      const toPublish = { ...newFlow };
       const result = await api.publishFlow(toPublish);
       get().pushToast({
         intent: result.success ? "success" : "error",
@@ -445,8 +452,8 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
       // Optionally apply to local document and save
       if (applyToDoc) {
         const flow = parseJson(document.json);
-        const replacedDef = replaceValuesWithTokens(flow.definition, entries);
-        const toSave = { ...flow, definition: replacedDef };
+        const replacedFlow = replaceValuesWithTokens(flow, entries);
+        const toSave = { ...replacedFlow };
         const saved = await api.saveFlow(document.file.filePath, toSave);
         get().markSaved(saved.id, saved);
       }

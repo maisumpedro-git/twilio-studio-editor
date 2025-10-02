@@ -12,7 +12,7 @@ export const findTokensInText = (text: string): string[] => {
 };
 
 export const collectFlowTokens = (flow: TwilioFlowDefinition): string[] => {
-  const json = JSON.stringify(flow.definition);
+  const json = JSON.stringify(flow);
   return findTokensInText(json);
 };
 

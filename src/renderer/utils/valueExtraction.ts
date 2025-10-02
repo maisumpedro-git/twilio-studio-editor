@@ -57,12 +57,10 @@ export const replaceValuesWithTokens = (obj: any, valueToVarName: Record<string,
     if (/^https?:\/\//i.test(obj)) {
       try {
         const u = new URL(obj);
-        const host = u.hostname;
+        const host = u.hostname.replace('.twil.io', '');
         if (valueToVarName[host]) {
           const token = `\${tse.vars.${valueToVarName[host]}}`.replace(/^\\/, "$");
-          // rebuild URL with token as hostname, preserving protocol, port, path, query, hash
-          const port = u.port ? `:${u.port}` : "";
-          const rebuilt = `${u.protocol}//${token}${port}${u.pathname}${u.search}${u.hash}`;
+          const rebuilt = obj.replace(host, token);
           return rebuilt;
         }
       } catch {}

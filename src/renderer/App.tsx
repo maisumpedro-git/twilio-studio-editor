@@ -403,7 +403,7 @@ const App = () => {
               continue;
             }
             // If v is a SID known in sidFriendly, use friendly-name
-            if (/^[A-Z]{2}[A-Za-z0-9]{32}$/.test(v) && sidFriendly[v]) {
+            if (sidFriendly[v]) { ///^[A-Z]{2}[A-Za-z0-9]{32}$/.test(v) &&
               prefill[v] = suggestFromFriendly(sidFriendly[v]);
               indicators[v] = { ...(indicators[v] || {}), friendly: true, friendlyName: sidFriendly[v] };
             } else {
