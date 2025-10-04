@@ -45,6 +45,7 @@ export const searchInFlows = async (term: string, fileIds?: string[]): Promise<F
     summaries = summaries.filter((s: FlowSummary) => allow.has(s.id));
   }
   const matches: FlowSearchMatch[] = [];
+  const seen = new Set<string>();
 
   for (const summary of summaries) {
     try {
@@ -56,15 +57,21 @@ export const searchInFlows = async (term: string, fileIds?: string[]): Promise<F
           continue;
         }
         const index = match.index;
+        const key = `${summary.id}:${index}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
         const previewStart = Math.max(0, index - CONTEXT_RADIUS);
         const previewEnd = Math.min(source.length, index + match[0].length + CONTEXT_RADIUS);
-  const preview = source.slice(previewStart, previewEnd).replace(/\s+/g, " ").trim();
+        const preview = source.slice(previewStart, previewEnd).replace(/\s+/g, " ").trim();
         const { line, column } = indexToLocation(source, index);
-  const widget = locateWidgetForMatch(file.flow, match[0]);
+        const widget = locateWidgetForMatch(file.flow, match[0]);
 
         matches.push({
           fileId: summary.id,
           fileName: summary.fileName,
+          friendlyName: file.flow.friendlyName || summary.friendlyName,
           matchedText: match[0],
           path: `${summary.fileName}:${line}:${column}`,
           line,

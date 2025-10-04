@@ -41,6 +41,7 @@ export type FlowSummary = {
 export type FlowSearchMatch = {
   fileId: string;
   fileName: string;
+  friendlyName?: string;
   widgetName?: string;
   widgetType?: string;
   matchedText: string;

@@ -129,7 +129,7 @@ const App = () => {
         if (match.widgetName) {
           setActiveWidget(match.widgetName);
         }
-        setSidebarMode("explorer");
+        // Keep the global search tab active per UX request
       })
       .catch(() => undefined);
   };

@@ -261,8 +261,8 @@ export const SidebarExplorer = ({
                     className="w-full rounded-md border border-slate-800 bg-slate-950/50 px-3 py-2 text-left text-xs text-slate-400 transition hover:border-slate-700 hover:bg-slate-900/70"
                   >
                     <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
-                      <span>{match.fileName}</span>
-                      <span>{match.path}</span>
+                      <span className="truncate">{match.friendlyName || match.fileName}</span>
+                      <span>{`${match.line}:${match.column}`}</span>
                     </div>
                     <p className="mt-2 text-sm text-slate-100">{match.preview}</p>
                     {match.widgetName ? (
