@@ -13,6 +13,7 @@ import {
 import { getFlowsDirectory, setWorkspaceRoot, getWorkspaceRoot } from "./constants";
 import { searchInFlows } from "./searchService";
 import { downloadAllFlows, publishFlow, saveFlowLocally, validateFlow } from "./cliService";
+import { listFlows as listRemoteFlows, fetchFlow as fetchRemoteFlow } from "./twilioApiService";
 import { getHeadFileContent, isGitRepo } from "./gitService";
 import { listEnvFiles, setActiveEnv, ensureMigrationTemplate } from "./workspaceService";
 import { readCurrentMapping, flattenMapping, upsertMapping, generateMappingFromFriendly } from "./mappingService";
@@ -139,6 +140,36 @@ const registerIpcHandlers = () => {
   registerHandler<unknown, Awaited<ReturnType<typeof downloadAllFlows>>>(
     "twilio:download-all",
     async () => downloadAllFlows()
+  );
+
+  // Remote flows (Twilio) helpers for selective download
+  registerHandler<unknown, Awaited<ReturnType<typeof listRemoteFlows>>>(
+    "twilio:list-remote-flows",
+    async () => listRemoteFlows()
+  );
+  registerHandler<{ sid: string }, Awaited<ReturnType<typeof fetchRemoteFlow>>>(
+    "twilio:fetch-remote-flow",
+    async (_e, p) => fetchRemoteFlow(p.sid)
+  );
+  registerHandler<unknown, { path: string | null }>(
+    "workspace:choose-directory",
+    async () => {
+      const result = await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
+      if (result.canceled || result.filePaths.length === 0) return { path: null };
+      return { path: result.filePaths[0] };
+    }
+  );
+  registerHandler<{ dir: string; flow: TwilioFlowDefinition }, { path: string }>(
+    "workspace:write-flow-to-dir",
+    async (_e, p) => {
+      const fsPromises = await import("fs/promises");
+      const pathMod = await import("path");
+      const fileName = `${p.flow.friendlyName?.trim()?.replace(/[^a-zA-Z0-9-_]+/g, "-").replace(/-+/g, "-") || "flow"}.flow.json`;
+      const abs = pathMod.join(p.dir, fileName);
+      await fsPromises.mkdir(pathMod.dirname(abs), { recursive: true });
+      await fsPromises.writeFile(abs, `${JSON.stringify(p.flow, null, 2)}\n`, "utf-8");
+      return { path: abs };
+    }
   );
 
   registerHandler<{ flow: TwilioFlowDefinition }, Awaited<ReturnType<typeof validateFlow>>>(

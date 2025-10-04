@@ -57,6 +57,9 @@ type AppState = {
   publishActiveFlow: () => Promise<void>;
   openPublishReview: () => Promise<void>;
   confirmPublishWithValues: (values: Record<string, string>) => Promise<void>;
+  openSelectiveDownload: () => Promise<void>;
+  closeSelectiveDownload: () => void;
+  confirmSelectiveDownload: (sids: string[], dir: string) => Promise<void>;
   openMappingCreate: () => Promise<void>;
   closeMappingCreate: () => void;
   confirmMappingCreate: (entries: Record<string, string>, applyToDoc: boolean) => Promise<void>;
@@ -95,6 +98,14 @@ type AppState = {
       prefill: Record<string, string>; // value -> suggested var name
       existingFlat: Record<string, string>;
       indicators: Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }>;
+    };
+    downloadFlows: {
+      open: boolean;
+      remote: Array<{ sid: string; friendlyName: string }>;
+      selectedSids: string[];
+      targetDir: string | null;
+      busy: boolean;
+      error?: string;
     };
   };
 };
@@ -141,6 +152,7 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
     publishReview: { open: false, tokens: [], mapping: {}, empties: [] },
     rightPanel: { open: (() => { try { return localStorage.getItem("varsPanelOpen") === "1"; } catch { return true; } })(), tab: "variables", flowTokens: [] }
   , mappingCreate: { open: false, values: [], prefill: {}, existingFlat: {}, indicators: {} as Record<string, { existing?: boolean; friendly?: boolean; friendlyName?: string }> }
+  , downloadFlows: { open: false, remote: [], selectedSids: [], targetDir: null, busy: false }
   },
 
   initialize: async () => {
@@ -339,6 +351,39 @@ const appStateCreator: StateCreator<AppState, [["zustand/devtools", never]], [],
   publishActiveFlow: async () => {
     // Open the publish review modal first
     await get().openPublishReview();
+  },
+
+  openSelectiveDownload: async () => {
+    const api = ensureApi();
+    try {
+      set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, open: true, busy: true, error: undefined } } }));
+      const list = await api.listRemoteFlows();
+      const remote = list.map((f) => ({ sid: f.sid || "", friendlyName: f.friendlyName || (f.sid || "") })).filter((r) => r.sid);
+      set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, remote, busy: false } } }));
+    } catch (e) {
+      set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, busy: false, error: (e as Error).message } } }));
+    }
+  },
+
+  closeSelectiveDownload: () => set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, open: false } } })),
+
+  confirmSelectiveDownload: async (sids: string[], dir: string) => {
+    const api = ensureApi();
+    try {
+      set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, busy: true, error: undefined } } }));
+      for (const sid of sids) {
+        try {
+          const flow = await api.fetchRemoteFlow(sid);
+          if (!flow) continue;
+          await api.writeFlowToDirectory(dir, flow);
+        } catch (e) {}
+      }
+      set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, busy: false, open: false } } }));
+      await get().refreshFlows();
+      get().pushToast({ intent: "success", message: `Fluxos salvos em ${dir}`, timestamp: Date.now() });
+    } catch (e) {
+      set((s) => ({ ui: { ...s.ui, downloadFlows: { ...s.ui.downloadFlows, busy: false, error: (e as Error).message } } }));
+    }
   },
 
   openPublishReview: async () => {

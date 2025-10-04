@@ -18,6 +18,7 @@ import { StatusBar } from "./components/chrome/StatusBar";
 import { Toast } from "./components/ui/Toast";
 import { useHotkeys } from "./hooks/useHotkeys";
 import { SidFriendlyUpdateModal } from "./components/workspace/SidFriendlyUpdateModal";
+import { DownloadFlowsModal } from "./components/workspace/DownloadFlowsModal";
 
 const App = () => {
   const [version, setVersion] = useState<string>("");
@@ -42,6 +43,7 @@ const App = () => {
   const saveActiveFlow = useAppStore((state) => state.saveActiveFlow);
   const publishActiveFlow = useAppStore((state) => state.publishActiveFlow);
   const toggleSidebarMode = useAppStore((state) => state.toggleSidebarMode);
+  const openSelectiveDownload = useAppStore((s) => s.openSelectiveDownload);
   const ui = useAppStore((s) => s.ui);
   const openPublishReview = useAppStore((s) => s.openPublishReview);
   const confirmPublishWithValues = useAppStore((s) => s.confirmPublishWithValues);
@@ -198,7 +200,7 @@ const App = () => {
         {
           combo: "mod+shift+d",
           handler: () => {
-            void downloadAllFlows();
+            void openSelectiveDownload();
           }
         },
         {
@@ -214,7 +216,7 @@ const App = () => {
           }
         }
       ],
-      [downloadAllFlows, publishActiveFlow, saveActiveFlow, setSidebarMode]
+  [openSelectiveDownload, publishActiveFlow, saveActiveFlow, setSidebarMode]
     )
   );
 
@@ -231,7 +233,7 @@ const App = () => {
         isFetching={isFetching}
         onRefreshFlows={refreshFlows}
         onToggleSidebarMode={toggleSidebarMode}
-        onDownloadFlows={downloadAllFlows}
+  onDownloadFlows={openSelectiveDownload}
         onSaveFlow={saveActiveFlow}
         onValidateFlow={validateActiveFlow}
         onPublishFlow={publishActiveFlow}
@@ -248,22 +250,22 @@ const App = () => {
       <div className="flex flex-1 overflow-hidden">
         <div style={{ width: sidebarCollapsed ? 0 : sidebarWidth }} className="h-full shrink-0 transition-[width] duration-150">
           <SidebarExplorer
-          mode={sidebarMode}
-          flows={flows}
-          activeFlowId={activeFlowId}
-          isFetching={isFetching}
-          searchTerm={searchTerm}
-          searchResults={searchResults}
-          isSearching={isSearching}
-          selectedFlowIds={selectedSearchFlowIds}
-          onSelectFlow={handleSelectFlow}
-          onOpenFlowInNewTab={(fp) => void openFlowInNewTab(fp)}
-          onChangeSearch={setSearchTerm}
-          onToggleMode={toggleSidebarMode}
-          onSelectSearchResult={handleSelectSearchResult}
-          onToggleSearchFlowId={toggleSelectedSearchFlowId}
-          onSelectAllSearchFlows={selectAllSearchFlows}
-          onClearSelectedSearchFlows={clearSelectedSearchFlows}
+            mode={sidebarMode}
+            flows={flows}
+            activeFlowId={activeFlowId}
+            isFetching={isFetching}
+            searchTerm={searchTerm}
+            searchResults={searchResults}
+            isSearching={isSearching}
+            selectedFlowIds={selectedSearchFlowIds}
+            onSelectFlow={handleSelectFlow}
+            onOpenFlowInNewTab={(fp) => void openFlowInNewTab(fp)}
+            onChangeSearch={setSearchTerm}
+            onToggleMode={toggleSidebarMode}
+            onSelectSearchResult={handleSelectSearchResult}
+            onToggleSearchFlowId={toggleSelectedSearchFlowId}
+            onSelectAllSearchFlows={selectAllSearchFlows}
+            onClearSelectedSearchFlows={clearSelectedSearchFlows}
           />
         </div>
         {!sidebarCollapsed ? (
@@ -293,7 +295,7 @@ const App = () => {
               <InitialPrompt
                 appVersion={version}
                 isFetching={isFetching}
-                onDownloadFlows={downloadAllFlows}
+                onDownloadFlows={openSelectiveDownload}
                 onRefreshFlows={refreshFlows}
                 onToggleSearch={() => setSidebarMode("global-search")}
               />
@@ -445,7 +447,13 @@ const App = () => {
             pushToast({ intent: "error", message: (e as Error).message || "Falha ao atualizar mapa/mapping.", timestamp: Date.now() });
           }
         }}
-      />
+  />
+
+  {/* Selective download modal */}
+  <DownloadFlowsModal />
+
+  {/* Selective download modal */}
+  <DownloadFlowsModal />
 
       {toast ? (
         <div className="pointer-events-none fixed bottom-6 right-6 z-50">
